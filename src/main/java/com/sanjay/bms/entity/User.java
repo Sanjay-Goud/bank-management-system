@@ -37,4 +37,26 @@ public class User {
 
     @Column(nullable = false)
     private Boolean enabled = true;
+
+    // New fields for enhanced security
+    private String phoneNumber;
+
+    private String twoFactorSecret; // For 2FA
+
+    @Column(nullable = false)
+    private Boolean twoFactorEnabled = false;
+
+    private String address;
+
+    private String dateOfBirth;
+
+    // Security fields
+    private Integer failedLoginAttempts = 0;
+
+    private LocalDateTime accountLockedUntil;
+
+    private String lastLoginIp;
+
+    @Column(nullable = false)
+    private Boolean accountLocked = false;
 }

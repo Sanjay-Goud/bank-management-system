@@ -21,4 +21,6 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findByUsernameAndSeverity(
             @Param("username") String username,
             @Param("severity") String severity);
+
+    List<AuditLog> findByUsernameAndSeverityOrderByTimestampDesc(String username, String severity);
 }

@@ -1,5 +1,8 @@
+// PasswordValidator.java
 package com.sanjay.bms.security;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.stereotype.Component;
 
 import java.util.regex.Pattern;
@@ -10,102 +13,89 @@ public class PasswordValidator {
     private static final int MIN_LENGTH = 8;
     private static final int MAX_LENGTH = 128;
 
+    // Regex patterns
     private static final Pattern UPPERCASE_PATTERN = Pattern.compile("[A-Z]");
     private static final Pattern LOWERCASE_PATTERN = Pattern.compile("[a-z]");
     private static final Pattern DIGIT_PATTERN = Pattern.compile("[0-9]");
-    private static final Pattern SPECIAL_CHAR_PATTERN = Pattern.compile("[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?]");
+    private static final Pattern SPECIAL_CHAR_PATTERN = Pattern.compile("[!@#$%^&*(),.?\":{}|<>]");
 
     public ValidationResult validate(String password) {
-        ValidationResult result = new ValidationResult();
-
         if (password == null || password.isEmpty()) {
-            result.setValid(false);
-            result.addError("Password cannot be empty");
-            return result;
+            return new ValidationResult(false, "Password cannot be empty");
         }
 
-        // Check length
         if (password.length() < MIN_LENGTH) {
-            result.setValid(false);
-            result.addError("Password must be at least " + MIN_LENGTH + " characters long");
+            return new ValidationResult(false,
+                    String.format("Password must be at least %d characters long", MIN_LENGTH));
         }
 
         if (password.length() > MAX_LENGTH) {
-            result.setValid(false);
-            result.addError("Password must not exceed " + MAX_LENGTH + " characters");
+            return new ValidationResult(false,
+                    String.format("Password must not exceed %d characters", MAX_LENGTH));
         }
 
-        // Check for uppercase
         if (!UPPERCASE_PATTERN.matcher(password).find()) {
-            result.setValid(false);
-            result.addError("Password must contain at least one uppercase letter");
+            return new ValidationResult(false,
+                    "Password must contain at least one uppercase letter");
         }
 
-        // Check for lowercase
         if (!LOWERCASE_PATTERN.matcher(password).find()) {
-            result.setValid(false);
-            result.addError("Password must contain at least one lowercase letter");
+            return new ValidationResult(false,
+                    "Password must contain at least one lowercase letter");
         }
 
-        // Check for digit
         if (!DIGIT_PATTERN.matcher(password).find()) {
-            result.setValid(false);
-            result.addError("Password must contain at least one digit");
+            return new ValidationResult(false,
+                    "Password must contain at least one digit");
         }
 
-        // Check for special character
         if (!SPECIAL_CHAR_PATTERN.matcher(password).find()) {
-            result.setValid(false);
-            result.addError("Password must contain at least one special character");
+            return new ValidationResult(false,
+                    "Password must contain at least one special character (!@#$%^&*(),.?\":{}|<>)");
         }
 
-        // Check for common passwords
+        // Check for common weak passwords
         if (isCommonPassword(password)) {
-            result.setValid(false);
-            result.addError("Password is too common. Please choose a stronger password");
+            return new ValidationResult(false,
+                    "Password is too common. Please choose a stronger password");
         }
 
-        return result;
+        return new ValidationResult(true, "Password is valid");
     }
 
     private boolean isCommonPassword(String password) {
+        String lowerPassword = password.toLowerCase();
         String[] commonPasswords = {
                 "password", "12345678", "qwerty", "abc123", "password123",
                 "admin123", "letmein", "welcome", "monkey", "dragon"
         };
 
-        String lowerPassword = password.toLowerCase();
         for (String common : commonPasswords) {
             if (lowerPassword.contains(common)) {
                 return true;
             }
         }
+
         return false;
     }
 
+    public String getPasswordRequirements() {
+        return String.format(
+                "Password must:\n" +
+                        "- Be at least %d characters long\n" +
+                        "- Contain at least one uppercase letter\n" +
+                        "- Contain at least one lowercase letter\n" +
+                        "- Contain at least one digit\n" +
+                        "- Contain at least one special character\n" +
+                        "- Not be a common password",
+                MIN_LENGTH
+        );
+    }
+
+    @Getter
+    @AllArgsConstructor
     public static class ValidationResult {
-        private boolean valid = true;
-        private java.util.List<String> errors = new java.util.ArrayList<>();
-
-        public boolean isValid() {
-            return valid;
-        }
-
-        public void setValid(boolean valid) {
-            this.valid = valid;
-        }
-
-        public java.util.List<String> getErrors() {
-            return errors;
-        }
-
-        public void addError(String error) {
-            this.errors.add(error);
-            this.valid = false;
-        }
-
-        public String getErrorMessage() {
-            return String.join(", ", errors);
-        }
+        private final boolean valid;
+        private final String errorMessage;
     }
 }

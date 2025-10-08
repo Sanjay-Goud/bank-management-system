@@ -39,4 +39,9 @@ public class Transaction {
     // For transfers
     private Long toAccountId;
     private String status; // SUCCESS, FAILED, PENDING
+
+    @Column(length = 500)
+    private String remarks;
+
+
 }

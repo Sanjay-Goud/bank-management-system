@@ -1,7 +1,11 @@
 package com.sanjay.bms.exception;
 
-class AccountLockedException extends RuntimeException {
+public class AccountLockedException extends RuntimeException {
     public AccountLockedException(String message) {
         super(message);
+    }
+
+    public AccountLockedException(String message, Throwable cause) {
+        super(message, cause);
     }
 }

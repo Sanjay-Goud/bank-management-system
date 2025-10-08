@@ -11,4 +11,8 @@ public class AccountDirectoryDto {
     private String maskedAccountNumber;
     private String accountHolderName;
     private String accountType;
+
+
+    public AccountDirectoryDto(Long id, String accountNumber, String accountHolderName, String accountType) {
+    }
 }

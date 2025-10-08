@@ -4,33 +4,34 @@ import com.sanjay.bms.dto.TransactionDto;
 import com.sanjay.bms.entity.Transaction;
 
 public class TransactionMapper {
+
     public static TransactionDto mapToTransactionDto(Transaction transaction) {
-        return new TransactionDto(
-                transaction.getId(),
-                transaction.getTransactionType(),
-                transaction.getAccountId(),
-                transaction.getAmount(),
-                transaction.getBalanceAfter(),
-                transaction.getDescription(),
-                transaction.getTransactionDate(),
-                transaction.getReferenceNumber(),
-                transaction.getToAccountId(),
-                transaction.getStatus()
-        );
+        TransactionDto dto = new TransactionDto();
+        dto.setId(transaction.getId());
+        dto.setTransactionType(transaction.getTransactionType());
+        dto.setAccountId(transaction.getAccountId());
+        dto.setAmount(transaction.getAmount());
+        dto.setBalanceAfter(transaction.getBalanceAfter());
+        dto.setDescription(transaction.getDescription());
+        dto.setTransactionDate(transaction.getTransactionDate());
+        dto.setReferenceNumber(transaction.getReferenceNumber());
+        dto.setToAccountId(transaction.getToAccountId());
+        dto.setStatus(transaction.getStatus());
+        return dto;
     }
 
-    public static Transaction mapToTransaction(TransactionDto transactionDto) {
-        return new Transaction(
-                transactionDto.getId(),
-                transactionDto.getTransactionType(),
-                transactionDto.getAccountId(),
-                transactionDto.getAmount(),
-                transactionDto.getBalanceAfter(),
-                transactionDto.getDescription(),
-                transactionDto.getTransactionDate(),
-                transactionDto.getReferenceNumber(),
-                transactionDto.getToAccountId(),
-                transactionDto.getStatus()
-        );
+    public static Transaction mapToTransaction(TransactionDto dto) {
+        Transaction transaction = new Transaction();
+        transaction.setId(dto.getId());
+        transaction.setTransactionType(dto.getTransactionType());
+        transaction.setAccountId(dto.getAccountId());
+        transaction.setAmount(dto.getAmount());
+        transaction.setBalanceAfter(dto.getBalanceAfter());
+        transaction.setDescription(dto.getDescription());
+        transaction.setTransactionDate(dto.getTransactionDate());
+        transaction.setReferenceNumber(dto.getReferenceNumber());
+        transaction.setToAccountId(dto.getToAccountId());
+        transaction.setStatus(dto.getStatus());
+        return transaction;
     }
 }

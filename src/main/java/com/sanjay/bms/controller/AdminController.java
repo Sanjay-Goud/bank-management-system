@@ -92,8 +92,8 @@ public class AdminController {
     }
 
     @GetMapping("/transactions/high-value")
-    public ResponseEntity<List<TransactionDto>> getHighValueTransactions() {
-        return ResponseEntity.ok(adminService.getHighValueTransactions());
+    public ResponseEntity<List<TransactionDto>> getHighValueTransactions(@PathVariable int limit) {
+        return ResponseEntity.ok(adminService.getHighValueTransactions(limit));
     }
 
     @PostMapping("/transactions/approve")

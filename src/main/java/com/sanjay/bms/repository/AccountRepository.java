@@ -21,4 +21,6 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     @Query("SELECT SUM(a.balance) FROM Account a WHERE a.accountStatus = 'Active'")
     BigDecimal getTotalActiveBalance();
+
+    Long countByAccountStatus(String active);
 }

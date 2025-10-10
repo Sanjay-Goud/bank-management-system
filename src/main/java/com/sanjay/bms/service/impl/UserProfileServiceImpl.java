@@ -48,7 +48,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         UserProfileDto dto = UserMapper.mapToUserProfileDto(user);
 
         // Get user accounts
-        List<Account> accounts = accountRepository.findByUserId(user.getId());
+        List<Account> accounts = accountRepository.findByUser_Id(user.getId());
         dto.setAccounts(accounts.stream()
                 .map(AccountMapper::mapToAccountDto)
                 .collect(Collectors.toList()));
@@ -195,6 +195,8 @@ public class UserProfileServiceImpl implements UserProfileService {
         return twoFactorAuthService.verifyCode(user.getTwoFactorSecret(), code);
     }
 
+    // Replace the getUserDashboard method with this corrected version:
+
     @Override
     public DashboardDto getUserDashboard(String username) {
         User user = userRepository.findByUsername(username)
@@ -203,7 +205,7 @@ public class UserProfileServiceImpl implements UserProfileService {
         DashboardDto dashboard = new DashboardDto();
 
         // Get accounts
-        List<Account> accounts = accountRepository.findByUserId(user.getId());
+        List<Account> accounts = accountRepository.findByUser_Id(user.getId());
         List<AccountDto> accountDtos = accounts.stream()
                 .map(AccountMapper::mapToAccountDto)
                 .collect(Collectors.toList());
@@ -226,10 +228,10 @@ public class UserProfileServiceImpl implements UserProfileService {
         Long todayTxns = transactionRepository.countTransactionsSince(startOfDay);
         dashboard.setTodayTransactions(todayTxns);
 
-        // Recent transactions (last 10)
+        // Recent transactions (last 10) - FIXED
         List<TransactionDto> recentTxns = accounts.stream()
                 .flatMap(acc -> transactionRepository
-                        .findByAccountIdOrderByTransactionDateDesc(acc.getId()).stream())
+                        .findByAccountIdOrderByTransactionDateDesc(acc.getId()).stream())  // ✅ Now uses acc.getId() which returns account ID
                 .limit(10)
                 .map(com.sanjay.bms.mapper.TransactionMapper::mapToTransactionDto)
                 .collect(Collectors.toList());

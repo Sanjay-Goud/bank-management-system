@@ -55,7 +55,7 @@ public class OtpService {
         String otpCode = generateOtp(user, "TRANSACTION");
 
         // Update OTP with transaction reference
-        Otp otp = otpRepository.findLatestByUserAndPurpose(user.getId(), "TRANSACTION")
+        Otp otp = otpRepository.findFirstByUserIdAndPurposeOrderByCreatedAtDesc(user.getId(), "TRANSACTION")
                 .orElseThrow(() -> new RuntimeException("OTP generation failed"));
         otp.setRelatedTransactionRef(transactionRef);
         otpRepository.save(otp);

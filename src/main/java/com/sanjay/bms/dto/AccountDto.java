@@ -1,26 +1,12 @@
 package com.sanjay.bms.dto;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-
-//public record AccountDto(Long id,
-//                         String accountNumber,
-//                         String maskedAccountNumber,
-//                         String accountHolderName,
-//                         String accountType,
-//                         BigDecimal balance,
-//                         String accountStatus,
-//                         LocalDateTime createdAt,
-//                         LocalDateTime lastTransactionDate,
-//                         BigDecimal dailyTransactionLimit,
-//                         BigDecimal perTransactionLimit,
-//                         BigDecimal interestRate,
-//                         BigDecimal minimumBalance,
-//                         String userId
-//){}
-
 
 @Setter
 @Getter
@@ -40,6 +26,5 @@ public class AccountDto {
     private BigDecimal perTransactionLimit;
     private BigDecimal interestRate;
     private BigDecimal minimumBalance;
-    private String userId;
+    private Long userId;  // ✅ Changed from String to Long
 }
-

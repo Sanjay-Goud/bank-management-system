@@ -50,6 +50,38 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//        http
+//                .csrf(csrf -> csrf.disable())
+//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+//                .sessionManagement(session ->
+//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+//                .authorizeHttpRequests(auth -> auth
+//                        // Public endpoints
+//                        .requestMatchers("/api/auth/**").permitAll()
+//                        .requestMatchers("/api/public/**").permitAll()
+//
+//                        // User endpoints
+//                        .requestMatchers("/api/accounts/**").authenticated()
+//                        .requestMatchers("/api/transactions/**").authenticated()
+//                        .requestMatchers("/api/profile/**").authenticated()
+//                        .requestMatchers("/api/directory/**").authenticated()
+//                        .requestMatchers("/api/statistics/**").authenticated()
+//                        .requestMatchers("/api/notifications/**").authenticated()
+//
+//                        // Admin endpoints
+//                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+//
+//                        // Default
+//                        .anyRequest().authenticated()
+//                )
+//                .authenticationProvider(authenticationProvider())
+//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
+//
+//        return http.build();
+//    }
+
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -58,18 +90,24 @@ public class SecurityConfig {
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        // Public endpoints
-                        .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/public/**").permitAll()
+                        // Allow frontend files
+                        .requestMatchers(
+                                "/", "/index.html", "/dashboard.html",
+                                "/css/**", "/js/**", "/images/**", "/static/**"
+                        ).permitAll()
 
-                        // User endpoints
+                        // Public endpoints
+                        .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
+
+                        // Authenticated endpoints
                         .requestMatchers("/api/accounts/**").authenticated()
                         .requestMatchers("/api/transactions/**").authenticated()
                         .requestMatchers("/api/profile/**").authenticated()
                         .requestMatchers("/api/directory/**").authenticated()
                         .requestMatchers("/api/statistics/**").authenticated()
+                        .requestMatchers("/api/notifications/**").authenticated()
 
-                        // Admin endpoints
+                        // Admin-only endpoints
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
                         // Default
@@ -81,10 +119,18 @@ public class SecurityConfig {
         return http.build();
     }
 
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOriginPatterns(Arrays.asList("*")); // Better than setAllowedOrigins("*")
+
+        // Use setAllowedOrigins instead of setAllowedOriginPatterns when you have specific origins
+        configuration.setAllowedOrigins(Arrays.asList(
+                "http://localhost:8080",
+                "http://127.0.0.1:8080",
+                "http://localhost:5500"
+        ));
+
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
@@ -95,4 +141,7 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
+
+
+
 }

@@ -23,17 +23,14 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        // Check if username exists
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new IllegalArgumentException("Username already exists");
         }
 
-        // Check if email exists
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new IllegalArgumentException("Email already exists");
         }
 
-        // Create new user
         User user = new User();
         user.setUsername(request.getUsername());
         user.setEmail(request.getEmail());
@@ -44,13 +41,9 @@ public class AuthService {
         user.setEnabled(true);
 
         User savedUser = userRepository.save(user);
-
         log.info("User registered successfully: {}", savedUser.getUsername());
 
-        // Generate token
         String token = jwtUtil.generateToken(savedUser.getUsername());
-
-        // Convert to DTO
         UserDto userDto = mapToUserDto(savedUser);
 
         return new AuthResponse(token, userDto);
@@ -60,42 +53,59 @@ public class AuthService {
     public AuthResponse login(LoginRequest request) {
         log.info("Login attempt for username: {}", request.getUsername());
 
-        // Find user by username
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> {
                     log.error("User not found: {}", request.getUsername());
                     return new IllegalArgumentException("Invalid username or password");
                 });
 
-        log.info("User found: {}", user.getUsername());
-        log.info("User enabled: {}", user.getEnabled());
+        // Debug logging
+        log.debug("User found: {}, Role: {}, Enabled: {}, Locked: {}",
+                user.getUsername(), user.getRole(), user.getEnabled(), user.getAccountLocked());
 
-        // Check if user is enabled
         if (!user.getEnabled()) {
             log.error("Account disabled for user: {}", user.getUsername());
             throw new IllegalArgumentException("Account is disabled");
         }
 
-        // Verify password
-        log.info("Verifying password...");
-        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPassword());
-        log.info("Password matches: {}", passwordMatches);
-
-        if (!passwordMatches) {
-            log.error("Invalid password for user: {}", user.getUsername());
-            throw new IllegalArgumentException("Invalid username or password");
+        if (user.getAccountLocked()) {
+            log.error("Account locked for user: {}", user.getUsername());
+            throw new IllegalArgumentException("Account is locked");
         }
 
-        // Update last login
+        // Debug password verification
+        log.debug("Verifying password for user: {}", user.getUsername());
+        log.debug("Stored password hash length: {}", user.getPassword().length());
+        log.debug("Stored password starts with: {}", user.getPassword().substring(0, Math.min(10, user.getPassword().length())));
+
+        boolean passwordMatches = passwordEncoder.matches(request.getPassword(), user.getPassword());
+        log.debug("Password matches: {}", passwordMatches);
+
+        if (!passwordMatches) {
+            log.warn("Failed login attempt for user: {} - Invalid password", user.getUsername());
+
+            // Increment failed login attempts
+            user.setFailedLoginAttempts(user.getFailedLoginAttempts() + 1);
+
+            // Lock account after 5 failed attempts
+            if (user.getFailedLoginAttempts() >= 5) {
+                user.setAccountLocked(true);
+                user.setAccountLockedUntil(LocalDateTime.now().plusMinutes(30));
+                log.warn("Account locked due to multiple failed login attempts: {}", user.getUsername());
+            }
+
+            userRepository.save(user);
+            throw new IllegalArgumentException("Invalid credentials");
+        }
+
+        // Reset failed login attempts on successful login
+        user.setFailedLoginAttempts(0);
         user.setLastLogin(LocalDateTime.now());
         userRepository.save(user);
 
-        log.info("Login successful for user: {}", user.getUsername());
+        log.info("Login successful for user: {} with role: {}", user.getUsername(), user.getRole());
 
-        // Generate token
         String token = jwtUtil.generateToken(user.getUsername());
-
-        // Convert to DTO
         UserDto userDto = mapToUserDto(user);
 
         return new AuthResponse(token, userDto);

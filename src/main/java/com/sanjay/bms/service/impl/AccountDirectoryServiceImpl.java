@@ -87,6 +87,9 @@ public class AccountDirectoryServiceImpl implements AccountDirectoryService {
     }
 
     private AccountDirectoryDto mapToDirectoryDto(Account account) {
+        if (account == null) {
+            throw new IllegalArgumentException("Account cannot be null");
+        }
         AccountDirectoryDto dto = new AccountDirectoryDto();
         dto.setAccountNumber(account.getAccountNumber());
         dto.setMaskedAccountNumber(maskAccountNumber(account.getAccountNumber()));

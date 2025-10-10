@@ -13,6 +13,7 @@ import java.util.List;
 
 @Slf4j
 @AllArgsConstructor
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/api/notifications")
 public class NotificationController {

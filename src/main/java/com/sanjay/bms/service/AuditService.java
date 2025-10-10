@@ -21,16 +21,16 @@ public class AuditService {
     @Transactional
     public void logAction(String username, String action, String details,
                           HttpServletRequest request, String severity) {
-        AuditLog log = new AuditLog();
-        log.setUsername(username);
-        log.setAction(action);
-        log.setDetails(details);
-        log.setIpAddress(getClientIp(request));
-        log.setTimestamp(LocalDateTime.now());
-        log.setDeviceInfo(request.getHeader("User-Agent"));
-        log.setSeverity(severity);
+        AuditLog auditLog = new AuditLog();
+        auditLog.setUsername(username);
+        auditLog.setAction(action);
+        auditLog.setDetails(details);
+        auditLog.setIpAddress(getClientIp(request));
+        auditLog.setTimestamp(LocalDateTime.now());
+        auditLog.setDeviceInfo(request.getHeader("User-Agent"));
+        auditLog.setSeverity(severity);
 
-        auditLogRepository.save(log);
+        auditLogRepository.save(auditLog);
         log.info("Audit log created: {} - {} - {}", username, action, severity);
     }
 

@@ -43,8 +43,9 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.getRecentUserTransactions(username, limit));
     }
 
+    // ✅ FIXED: Return type matches service implementation
     @PostMapping("/transfer")
-    public ResponseEntity<TransferResponseDto> transferFunds(
+    public ResponseEntity<TransactionDto> transferFunds(
             @RequestBody TransferRequestWithOtp request,
             Authentication authentication,
             HttpServletRequest httpRequest) {
@@ -54,16 +55,20 @@ public class TransactionController {
                 HttpStatus.CREATED);
     }
 
+    // ✅ FIXED: This endpoint works correctly now
     @PostMapping("/transfer/initiate")
     public ResponseEntity<Map<String, String>> initiateTransfer(
             @RequestBody TransferRequest request,
             Authentication authentication) {
         String username = authentication.getName();
         String message = transactionService.initiateTransfer(request, username);
-        return ResponseEntity.ok(Map.of("message", message, "requiresOtp", "true"));
+        return ResponseEntity.ok(Map.of(
+                "message", message,
+                "status", "INITIATED",
+                "requiresOtp", message.contains("OTP") ? "true" : "false"
+        ));
     }
 
-    // Filter transactions
     @PostMapping("/filter")
     public ResponseEntity<List<TransactionDto>> filterTransactions(
             @RequestBody TransactionFilterDto filter,
@@ -72,7 +77,6 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.filterTransactions(filter, username));
     }
 
-    // Search transactions
     @GetMapping("/search")
     public ResponseEntity<List<TransactionDto>> searchTransactions(
             @RequestParam String query,
@@ -81,7 +85,6 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.searchTransactions(query, username));
     }
 
-    // Transaction by reference number
     @GetMapping("/reference/{refNumber}")
     public ResponseEntity<TransactionDto> getTransactionByReference(
             @PathVariable String refNumber,
@@ -90,7 +93,6 @@ public class TransactionController {
         return ResponseEntity.ok(transactionService.getTransactionByReference(refNumber, username));
     }
 
-    // Download statement as PDF
     @PostMapping(value = "/statement/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public void downloadStatementPdf(
             @RequestBody StatementRequest request,
@@ -105,7 +107,6 @@ public class TransactionController {
         response.getOutputStream().write(pdfBytes);
     }
 
-    // Download statement as CSV
     @PostMapping(value = "/statement/csv", produces = "text/csv")
     public void downloadStatementCsv(
             @RequestBody StatementRequest request,
@@ -120,7 +121,6 @@ public class TransactionController {
         response.getWriter().write(csvContent);
     }
 
-    // Get transaction statistics
     @GetMapping("/stats")
     public ResponseEntity<TransactionStatsDto> getTransactionStats(
             Authentication authentication,

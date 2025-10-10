@@ -3,11 +3,15 @@ package com.sanjay.bms.service.impl;
 import com.sanjay.bms.dto.AccountDto;
 import com.sanjay.bms.entity.Account;
 import com.sanjay.bms.entity.User;
+import com.sanjay.bms.exception.InsufficientBalanceException;
 import com.sanjay.bms.exception.ResourceNotFoundException;
+import com.sanjay.bms.mapper.AccountMapper;
 import com.sanjay.bms.repository.AccountRepository;
 import com.sanjay.bms.repository.UserRepository;
-import com.sanjay.bms.service.NotificationService;
+import com.sanjay.bms.service.AccountService;
 import com.sanjay.bms.service.AuditService;
+import com.sanjay.bms.service.NotificationService;
+import com.sanjay.bms.service.TransactionService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Random;
@@ -24,226 +27,359 @@ import java.util.stream.Collectors;
 @Slf4j
 @AllArgsConstructor
 @Service
-public class AccountServiceImpl {
+public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final TransactionService transactionService;
     private final NotificationService notificationService;
     private final AuditService auditService;
-    private final TransactionServiceImpl transactionService;
 
+    // ✅ UPDATED: createAccount with username and request
+    @Override
     @Transactional
     public AccountDto createAccount(AccountDto accountDto, String username, HttpServletRequest request) {
+        log.info("Creating new account for user: {}", username);
+
+        // Find user by username
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
         Account account = new Account();
         account.setAccountNumber(generateAccountNumber());
-        account.setAccountHolderName(accountDto.getAccountHolderName());
+        account.setAccountHolderName(accountDto.getAccountHolderName() != null ?
+                accountDto.getAccountHolderName() : user.getFullName());
         account.setAccountType(accountDto.getAccountType());
         account.setBalance(accountDto.getBalance() != null ? accountDto.getBalance() : BigDecimal.ZERO);
         account.setAccountStatus("Active");
         account.setUser(user);
         account.setCreatedAt(LocalDateTime.now());
-        account.setDailyTransactionLimit(new BigDecimal("100000"));
-        account.setPerTransactionLimit(new BigDecimal("50000"));
-        account.setDailyTransactionTotal(BigDecimal.ZERO);
-        account.setDailyLimitResetDate(LocalDateTime.now());
-
-        // Set interest rate based on account type
-        if ("SAVINGS".equals(accountDto.getAccountType())) {
-            account.setInterestRate(new BigDecimal("4.5"));
-            account.setMinimumBalance(new BigDecimal("1000"));
-        } else if ("CHECKING".equals(accountDto.getAccountType())) {
-            account.setInterestRate(new BigDecimal("0"));
-            account.setMinimumBalance(BigDecimal.ZERO);
-        }
+        account.setDailyTransactionLimit(accountDto.getDailyTransactionLimit() != null ?
+                accountDto.getDailyTransactionLimit() : new BigDecimal("100000"));
+        account.setPerTransactionLimit(accountDto.getPerTransactionLimit() != null ?
+                accountDto.getPerTransactionLimit() : new BigDecimal("50000"));
+        account.setInterestRate(accountDto.getInterestRate());
+        account.setMinimumBalance(accountDto.getMinimumBalance() != null ?
+                accountDto.getMinimumBalance() : BigDecimal.ZERO);
 
         Account savedAccount = accountRepository.save(account);
 
-        // Create notification
-        notificationService.createNotification(user, "New Account Created",
-                "Your new " + account.getAccountType() + " account has been created successfully. Account Number: " +
-                        maskAccountNumber(savedAccount.getAccountNumber()), "ACCOUNT");
-
         // Audit log
-        auditService.logAccountAction(username, "ACCOUNT_CREATED", savedAccount.getId(),
-                "Account created: " + savedAccount.getAccountNumber(), request);
+        auditService.logAction(username, "ACCOUNT_CREATED",
+                "Account created: " + savedAccount.getAccountNumber(), request, "INFO");
 
-        return mapToDto(savedAccount);
+        // Notification
+        notificationService.createNotification(user, "Account Created",
+                "Your " + accountDto.getAccountType() + " account has been created successfully. " +
+                        "Account number: " + savedAccount.getAccountNumber(), "ACCOUNT");
+
+        log.info("Account created successfully: {}", savedAccount.getAccountNumber());
+        return AccountMapper.mapToAccountDto(savedAccount);
     }
 
-    public List<AccountDto> getUserAccounts(String username) {
-        User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-        return accountRepository.findByUserId(user.getId()).stream()
-                .map(this::mapToDto)
+    @Override
+    public List<AccountDto> getAllAccounts() {
+        return accountRepository.findAll().stream()
+                .map(AccountMapper::mapToAccountDto)
                 .collect(Collectors.toList());
     }
 
-    public AccountDto getAccountById(Long id, String username) {
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    // ✅ NEW: Get user's accounts
+    @Override
+    public List<AccountDto> getUserAccounts(String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
-        // Verify ownership
-        if (!account.getUser().getUsername().equals(username)) {
-            throw new SecurityException("Access denied");
-        }
-
-        return mapToDto(account);
+        return accountRepository.findByUser_Id(user.getId()).stream()
+                .map(AccountMapper::mapToAccountDto)
+                .collect(Collectors.toList());
     }
 
+    // ✅ NEW: Get account by ID with ownership verification
+    @Override
+    public AccountDto getAccountById(Long id, String username) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
+
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+
+        // Verify ownership (unless admin)
+        if (!account.getUserId().equals(user.getId()) && !"ADMIN".equals(user.getRole())) {
+            throw new SecurityException("Access denied to this account");
+        }
+
+        return AccountMapper.mapToAccountDto(account);
+    }
+
+    // Keep backward compatibility
+    @Override
+    public AccountDto getAccount(Long id) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+        return AccountMapper.mapToAccountDto(account);
+    }
+
+    @Override
     @Transactional
-    public AccountDto deposit(Long accountId, BigDecimal amount, String username,
-                              HttpServletRequest request) {
+    public AccountDto updateAccount(Long id, AccountDto accountDto) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+
+        // Update allowed fields
+        if (accountDto.getAccountHolderName() != null) {
+            account.setAccountHolderName(accountDto.getAccountHolderName());
+        }
+        if (accountDto.getAccountType() != null) {
+            account.setAccountType(accountDto.getAccountType());
+        }
+        if (accountDto.getAccountStatus() != null) {
+            account.setAccountStatus(accountDto.getAccountStatus());
+        }
+        if (accountDto.getDailyTransactionLimit() != null) {
+            account.setDailyTransactionLimit(accountDto.getDailyTransactionLimit());
+        }
+        if (accountDto.getPerTransactionLimit() != null) {
+            account.setPerTransactionLimit(accountDto.getPerTransactionLimit());
+        }
+        if (accountDto.getInterestRate() != null) {
+            account.setInterestRate(accountDto.getInterestRate());
+        }
+        if (accountDto.getMinimumBalance() != null) {
+            account.setMinimumBalance(accountDto.getMinimumBalance());
+        }
+
+        Account updatedAccount = accountRepository.save(account);
+        log.info("Account updated: {}", updatedAccount.getAccountNumber());
+
+        return AccountMapper.mapToAccountDto(updatedAccount);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAccount(Long id) {
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+
+        // Check if account has balance
+        if (account.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+            throw new IllegalArgumentException("Cannot delete account with non-zero balance");
+        }
+
+        accountRepository.deleteById(id);
+        log.info("Account deleted: {}", account.getAccountNumber());
+    }
+
+    @Override
+    public AccountDto findByAccountNumber(String accountNumber) {
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found: " + accountNumber));
+        return AccountMapper.mapToAccountDto(account);
+    }
+
+    @Override
+    public List<AccountDto> findByAccountTypeIgnoreCase(String accountType) {
+        return accountRepository.findByAccountTypeIgnoreCase(accountType).stream()
+                .map(AccountMapper::mapToAccountDto)
+                .collect(Collectors.toList());
+    }
+
+    // ✅ UPDATED: deposit with username and request
+    @Override
+    @Transactional
+    public AccountDto deposit(Long id, BigDecimal amount, String username, HttpServletRequest request) {
+        log.info("Processing deposit for account ID: {}, amount: {}, user: {}", id, amount, username);
+
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Deposit amount must be greater than zero");
         }
 
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        // Find user
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
-        // Verify ownership
-        if (!account.getUser().getUsername().equals(username)) {
-            throw new SecurityException("Access denied");
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+
+        // Verify ownership (unless admin)
+        if (!account.getUserId().equals(user.getId()) && !"ADMIN".equals(user.getRole())) {
+            throw new SecurityException("Access denied to this account");
         }
 
-        // Check account status
         if (!"Active".equals(account.getAccountStatus())) {
             throw new IllegalArgumentException("Account is not active");
         }
-
-        // Check transaction limit
-        validateTransactionLimit(account, amount);
 
         BigDecimal newBalance = account.getBalance().add(amount);
         account.setBalance(newBalance);
         account.setLastTransactionDate(LocalDateTime.now());
-        updateDailyTotal(account, amount);
 
-        Account savedAccount = accountRepository.save(account);
+        Account updatedAccount = accountRepository.save(account);
 
         // Record transaction
-        transactionService.recordTransaction("DEPOSIT", accountId, amount, newBalance,
-                "Deposit to account");
+        transactionService.recordTransaction("DEPOSIT", id, amount, newBalance,
+                "Deposit to account " + account.getAccountNumber());
+
+        // Audit log
+        auditService.logTransaction(username, "DEPOSIT", id, amount.toString(), request);
 
         // Send notification
         notificationService.notifyDeposit(account.getUser(), account.getAccountNumber(), amount);
 
-        // Audit log
-        auditService.logTransaction(username, "DEPOSIT", accountId, amount.toString(), request);
+        log.info("Deposit successful. New balance: {}", newBalance);
 
-        // Check for high-value transaction
-        if (amount.compareTo(new BigDecimal("50000")) > 0) {
-            notificationService.notifyHighValueTransaction(account.getUser(), amount, "DEPOSIT");
-        }
-
-        return mapToDto(savedAccount);
+        return AccountMapper.mapToAccountDto(updatedAccount);
     }
 
+    // ✅ UPDATED: withdraw with username and request
+    @Override
     @Transactional
-    public AccountDto withdraw(Long accountId, BigDecimal amount, String username,
-                               HttpServletRequest request) {
+    public AccountDto withdraw(Long id, BigDecimal amount, String username, HttpServletRequest request) {
+        log.info("Processing withdrawal for account ID: {}, amount: {}, user: {}", id, amount, username);
+
         if (amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("Withdrawal amount must be greater than zero");
         }
 
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+        // Find user
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found: " + username));
 
-        // Verify ownership
-        if (!account.getUser().getUsername().equals(username)) {
-            throw new SecurityException("Access denied");
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + id));
+
+        // Verify ownership (unless admin)
+        if (!account.getUserId().equals(user.getId()) && !"ADMIN".equals(user.getRole())) {
+            throw new SecurityException("Access denied to this account");
         }
 
-        // Check account status
         if (!"Active".equals(account.getAccountStatus())) {
             throw new IllegalArgumentException("Account is not active");
         }
 
-        // Check transaction limit
-        validateTransactionLimit(account, amount);
-
         // Check balance
+        if (account.getBalance().compareTo(amount) < 0) {
+            throw new InsufficientBalanceException("Insufficient balance. Available: " + account.getBalance());
+        }
+
+        // Check minimum balance
         BigDecimal balanceAfterWithdrawal = account.getBalance().subtract(amount);
         if (balanceAfterWithdrawal.compareTo(account.getMinimumBalance()) < 0) {
-            throw new IllegalArgumentException("Insufficient balance. Minimum balance required: " +
+            throw new IllegalArgumentException("Cannot withdraw. Minimum balance requirement: " +
                     account.getMinimumBalance());
         }
 
-        account.setBalance(balanceAfterWithdrawal);
-        account.setLastTransactionDate(LocalDateTime.now());
-        updateDailyTotal(account, amount);
+        // Check transaction limit
+        if (amount.compareTo(account.getPerTransactionLimit()) > 0) {
+            throw new IllegalArgumentException("Amount exceeds per-transaction limit: " +
+                    account.getPerTransactionLimit());
+        }
 
-        Account savedAccount = accountRepository.save(account);
+        BigDecimal newBalance = account.getBalance().subtract(amount);
+        account.setBalance(newBalance);
+        account.setLastTransactionDate(LocalDateTime.now());
+
+        Account updatedAccount = accountRepository.save(account);
 
         // Record transaction
-        transactionService.recordTransaction("WITHDRAW", accountId, amount, balanceAfterWithdrawal,
-                "Withdrawal from account");
+        transactionService.recordTransaction("WITHDRAW", id, amount, newBalance,
+                "Withdrawal from account " + account.getAccountNumber());
+
+        // Audit log
+        auditService.logTransaction(username, "WITHDRAW", id, amount.toString(), request);
 
         // Send notification
         notificationService.notifyWithdrawal(account.getUser(), account.getAccountNumber(), amount);
 
-        // Audit log
-        auditService.logTransaction(username, "WITHDRAW", accountId, amount.toString(), request);
+        log.info("Withdrawal successful. New balance: {}", newBalance);
 
-        // Check for high-value transaction
-        if (amount.compareTo(new BigDecimal("50000")) > 0) {
-            notificationService.notifyHighValueTransaction(account.getUser(), amount, "WITHDRAWAL");
-        }
-
-        return mapToDto(savedAccount);
+        return AccountMapper.mapToAccountDto(updatedAccount);
     }
 
+    @Override
+    public Long getTotalAccountCount() {
+        return accountRepository.count();
+    }
+
+    @Override
+    public List<AccountDto> getAccountsAboveBalance(BigDecimal minBalance) {
+        return accountRepository.findByBalanceGreaterThanEqual(minBalance).stream()
+                .map(AccountMapper::mapToAccountDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     @Transactional
-    public void freezeAccount(Long accountId, String reason, String adminUsername,
-                              HttpServletRequest request) {
+    public void freezeAccount(Long accountId, String reason, String performedBy, HttpServletRequest request) {
+        log.info("Freezing account ID: {} by {}", accountId, performedBy);
+
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+
+        if ("Frozen".equals(account.getAccountStatus())) {
+            throw new IllegalArgumentException("Account is already frozen");
+        }
 
         account.setAccountStatus("Frozen");
         account.setFrozenReason(reason);
         account.setFrozenAt(LocalDateTime.now());
         accountRepository.save(account);
 
+        // Audit log
+        auditService.logAccountAction(performedBy, "ACCOUNT_FROZEN", accountId,
+                "Account " + account.getAccountNumber() + " frozen. Reason: " + reason, request);
+
         // Notify user
         notificationService.notifyAccountFrozen(account.getUser(), account.getAccountNumber(), reason);
 
-        // Audit log
-        auditService.logAccountAction(adminUsername, "ACCOUNT_FROZEN", accountId,
-                "Account frozen. Reason: " + reason, request);
+        log.info("Account frozen successfully: {}", account.getAccountNumber());
     }
 
+    @Override
     @Transactional
-    public void unfreezeAccount(Long accountId, String adminUsername, HttpServletRequest request) {
+    public void unfreezeAccount(Long accountId, String performedBy, HttpServletRequest request) {
+        log.info("Unfreezing account ID: {} by {}", accountId, performedBy);
+
         Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+
+        if (!"Frozen".equals(account.getAccountStatus())) {
+            throw new IllegalArgumentException("Account is not frozen");
+        }
 
         account.setAccountStatus("Active");
         account.setFrozenReason(null);
         account.setFrozenAt(null);
         accountRepository.save(account);
 
+        // Audit log
+        auditService.logAccountAction(performedBy, "ACCOUNT_UNFROZEN", accountId,
+                "Account " + account.getAccountNumber() + " unfrozen", request);
+
         // Notify user
         notificationService.createNotification(account.getUser(), "Account Unfrozen",
-                "Your account " + maskAccountNumber(account.getAccountNumber()) + " has been unfrozen",
+                "Your account " + account.getAccountNumber() + " has been unfrozen and is now active.",
                 "ACCOUNT");
 
-        // Audit log
-        auditService.logAccountAction(adminUsername, "ACCOUNT_UNFROZEN", accountId,
-                "Account unfrozen", request);
+        log.info("Account unfrozen successfully: {}", account.getAccountNumber());
     }
 
+    @Override
     @Transactional
-    public void closeAccount(Long accountId, String reason, String adminUsername,
-                             HttpServletRequest request) {
-        Account account = accountRepository.findById(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException("Account not found"));
+    public void closeAccount(Long accountId, String reason, String performedBy, HttpServletRequest request) {
+        log.info("Closing account ID: {} by {}", accountId, performedBy);
 
-        // Check if balance is zero
-        if (account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
-            throw new IllegalArgumentException("Cannot close account with non-zero balance");
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new ResourceNotFoundException("Account not found with id: " + accountId));
+
+        if ("Closed".equals(account.getAccountStatus())) {
+            throw new IllegalArgumentException("Account is already closed");
+        }
+
+        // Check balance
+        if (account.getBalance().compareTo(BigDecimal.ZERO) > 0) {
+            throw new IllegalArgumentException("Cannot close account with non-zero balance. " +
+                    "Please withdraw all funds first.");
         }
 
         account.setAccountStatus("Closed");
@@ -251,84 +387,34 @@ public class AccountServiceImpl {
         account.setClosedAt(LocalDateTime.now());
         accountRepository.save(account);
 
+        // Audit log
+        auditService.logAccountAction(performedBy, "ACCOUNT_CLOSED", accountId,
+                "Account " + account.getAccountNumber() + " closed. Reason: " + reason, request);
+
         // Notify user
         notificationService.createNotification(account.getUser(), "Account Closed",
-                "Your account " + maskAccountNumber(account.getAccountNumber()) + " has been closed. Reason: " + reason,
+                "Your account " + account.getAccountNumber() + " has been closed. Reason: " + reason,
                 "ACCOUNT");
 
-        // Audit log
-        auditService.logAccountAction(adminUsername, "ACCOUNT_CLOSED", accountId,
-                "Account closed. Reason: " + reason, request);
-    }
-
-    private void validateTransactionLimit(Account account, BigDecimal amount) {
-        // Reset daily total if new day
-        if (account.getDailyLimitResetDate().toLocalDate().isBefore(LocalDate.now())) {
-            account.setDailyTransactionTotal(BigDecimal.ZERO);
-            account.setDailyLimitResetDate(LocalDateTime.now());
-        }
-
-        // Check per-transaction limit
-        if (amount.compareTo(account.getPerTransactionLimit()) > 0) {
-            throw new IllegalArgumentException("Transaction amount exceeds per-transaction limit of " +
-                    account.getPerTransactionLimit());
-        }
-
-        // Check daily limit
-        BigDecimal newDailyTotal = account.getDailyTransactionTotal().add(amount);
-        if (newDailyTotal.compareTo(account.getDailyTransactionLimit()) > 0) {
-            throw new IllegalArgumentException("Daily transaction limit exceeded. Limit: " +
-                    account.getDailyTransactionLimit() + ", Used: " + account.getDailyTransactionTotal());
-        }
-    }
-
-    private void updateDailyTotal(Account account, BigDecimal amount) {
-        account.setDailyTransactionTotal(account.getDailyTransactionTotal().add(amount));
+        log.info("Account closed successfully: {}", account.getAccountNumber());
     }
 
     private String generateAccountNumber() {
+        // Generate 12-digit account number
         Random random = new Random();
-        StringBuilder accountNumber = new StringBuilder("ACC");
-        for (int i = 0; i < 9; i++) {
+        StringBuilder accountNumber = new StringBuilder("AC");
+        for (int i = 0; i < 10; i++) {
             accountNumber.append(random.nextInt(10));
         }
 
         // Ensure uniqueness
         while (accountRepository.findByAccountNumber(accountNumber.toString()).isPresent()) {
-            accountNumber = new StringBuilder("ACC");
-            for (int i = 0; i < 9; i++) {
+            accountNumber = new StringBuilder("AC");
+            for (int i = 0; i < 10; i++) {
                 accountNumber.append(random.nextInt(10));
             }
         }
 
         return accountNumber.toString();
-    }
-
-    private String maskAccountNumber(String accountNumber) {
-        if (accountNumber == null || accountNumber.length() < 8) {
-            return accountNumber;
-        }
-        String first4 = accountNumber.substring(0, 4);
-        String last4 = accountNumber.substring(accountNumber.length() - 4);
-        return first4 + "****" + last4;
-    }
-
-    private AccountDto mapToDto(Account account) {
-        AccountDto dto = new AccountDto();
-        dto.setId(account.getId());
-        dto.setAccountNumber(account.getAccountNumber());
-        dto.setMaskedAccountNumber(maskAccountNumber(account.getAccountNumber()));
-        dto.setAccountHolderName(account.getAccountHolderName());
-        dto.setAccountType(account.getAccountType());
-        dto.setBalance(account.getBalance());
-        dto.setAccountStatus(account.getAccountStatus());
-        dto.setCreatedAt(account.getCreatedAt());
-        dto.setLastTransactionDate(account.getLastTransactionDate());
-        dto.setDailyTransactionLimit(account.getDailyTransactionLimit());
-        dto.setPerTransactionLimit(account.getPerTransactionLimit());
-        dto.setInterestRate(account.getInterestRate());
-        dto.setMinimumBalance(account.getMinimumBalance());
-        dto.setUserId(account.getUser().getUsername());
-        return dto;
     }
 }

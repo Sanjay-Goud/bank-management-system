@@ -24,15 +24,14 @@ public class Account {
     private String accountHolderName;
 
     @Column(nullable = false)
-    private String accountType; // SAVINGS, CHECKING, FIXED_DEPOSIT
+    private String accountType;
 
     @Column(nullable = false)
     private BigDecimal balance;
 
     @Column(nullable = false)
-    private String accountStatus; // Active, Inactive, Frozen, Closed
+    private String accountStatus;
 
-    // New fields
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
@@ -42,7 +41,6 @@ public class Account {
 
     private LocalDateTime lastTransactionDate;
 
-    // Transaction limits
     @Column(nullable = false)
     private BigDecimal dailyTransactionLimit = new BigDecimal("100000");
 
@@ -50,22 +48,16 @@ public class Account {
     private BigDecimal perTransactionLimit = new BigDecimal("50000");
 
     private BigDecimal dailyTransactionTotal = BigDecimal.ZERO;
-
     private LocalDateTime dailyLimitResetDate;
-
-    // Interest rate for savings accounts
     private BigDecimal interestRate;
-
-    // Minimum balance requirement
     private BigDecimal minimumBalance = BigDecimal.ZERO;
-
-    // Account closure
     private LocalDateTime closedAt;
-
     private String closureReason;
-
-    // For admin actions
     private String frozenReason;
-
     private LocalDateTime frozenAt;
+
+    // FIXED: Added helper method to get user ID
+    public Long getUserId() {
+        return user != null ? user.getId() : null;
+    }
 }

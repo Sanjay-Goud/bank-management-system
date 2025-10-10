@@ -30,7 +30,7 @@ public class AdminServiceImpl implements AdminService {
     private final AuditLogRepository auditLogRepository;
     private final NotificationService notificationService;
     private final AuditService auditService;
-    private final AccountServiceImpl accountService;
+    private final AccountService accountService;
 
     @Override
     public AdminDashboardDto getDashboard() {
@@ -360,7 +360,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void freezeAccount(Long accountId, String reason, HttpServletRequest httpRequest) {
-            accountService.freezeAccount(accountId, reason, "admin", httpRequest);
+        accountService.freezeAccount(accountId, reason, "admin", httpRequest);
     }
 
     @Override
@@ -469,7 +469,7 @@ public class AdminServiceImpl implements AdminService {
         AdminUserDto dto = UserMapper.mapToAdminUserDto(user);
 
         // Add account and balance info
-        List<Account> accounts = accountRepository.findByUserId(user.getId());
+        List<Account> accounts = accountRepository.findByUser_Id(user.getId());
         dto.setTotalAccounts(accounts.size());
 
         BigDecimal totalBalance = accounts.stream()

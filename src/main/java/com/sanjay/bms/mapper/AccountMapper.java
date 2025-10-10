@@ -20,7 +20,7 @@ public class AccountMapper {
         dto.setPerTransactionLimit(account.getPerTransactionLimit());
         dto.setInterestRate(account.getInterestRate());
         dto.setMinimumBalance(account.getMinimumBalance());
-        dto.setUserId(account.getUser() != null ? account.getUser().getUsername() : null);
+        dto.setUserId(account.getUser() != null ? account.getUser().getId() : null); // ✅ Fixed here
         return dto;
     }
 

@@ -1,0 +1,99 @@
+2025-10-10T07:15:09.052+05:30  INFO 10844 --- [banking-management-system] [main] com.sanjay.bms.BmsApplicationTests       : Starting BmsApplicationTests using Java 21.0.8 with PID 10844 (started by hp in D:\Projects\Spring Boot\bms)
+2025-10-10T07:15:09.065+05:30 DEBUG 10844 --- [banking-management-system] [main] com.sanjay.bms.BmsApplicationTests       : Running with Spring Boot v3.5.6, Spring v6.2.11
+2025-10-10T07:15:09.067+05:30  INFO 10844 --- [banking-management-system] [main] com.sanjay.bms.BmsApplicationTests       : No active profile set, falling back to 1 default profile: "default"
+2025-10-10T07:15:13.430+05:30  INFO 10844 --- [banking-management-system] [main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-10-10T07:15:13.580+05:30  INFO 10844 --- [banking-management-system] [main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 134 ms. Found 6 JPA repository interfaces.
+2025-10-10T07:15:14.638+05:30  INFO 10844 --- [banking-management-system] [main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-10-10T07:15:14.776+05:30  INFO 10844 --- [banking-management-system] [main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.29.Final
+2025-10-10T07:15:14.860+05:30  INFO 10844 --- [banking-management-system] [main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-10-10T07:15:15.660+05:30  INFO 10844 --- [banking-management-system] [main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-10-10T07:15:15.742+05:30  INFO 10844 --- [banking-management-system] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-10-10T07:15:16.348+05:30  INFO 10844 --- [banking-management-system] [main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@5e80d5
+2025-10-10T07:15:16.352+05:30  INFO 10844 --- [banking-management-system] [main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-10-10T07:15:16.530+05:30  WARN 10844 --- [banking-management-system] [main] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-10-10T07:15:16.562+05:30  INFO 10844 --- [banking-management-system] [main] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 17.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-10-10T07:15:18.563+05:30  INFO 10844 --- [banking-management-system] [main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-10-10T07:15:19.163+05:30  INFO 10844 --- [banking-management-system] [main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-10-10T07:15:19.772+05:30  INFO 10844 --- [banking-management-system] [main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-10-10T07:15:21.738+05:30  WARN 10844 --- [banking-management-system] [main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-10-10T07:15:21.787+05:30  INFO 10844 --- [banking-management-system] [main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-10-10T07:15:22.432+05:30  INFO 10844 --- [banking-management-system] [main] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2025-10-10T07:15:22.583+05:30  INFO 10844 --- [banking-management-system] [main] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-10-10T07:15:22.589+05:30  WARN 10844 --- [banking-management-system] [main] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-10-10T07:15:22.934+05:30 DEBUG 10844 --- [banking-management-system] [main] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, CorsFilter, LogoutFilter, JwtAuthenticationFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2025-10-10T07:15:24.226+05:30  INFO 10844 --- [banking-management-system] [main] com.sanjay.bms.BmsApplicationTests       : Started BmsApplicationTests in 15.948 seconds (process running for 18.131)
+2025-10-10T07:15:26.722+05:30  INFO 10844 --- [banking-management-system] [SpringApplicationShutdownHook] j.LocalContainerEntityManagerFactoryBean : Closing JPA EntityManagerFactory for persistence unit 'default'
+2025-10-10T07:15:26.725+05:30  INFO 10844 --- [banking-management-system] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown initiated...
+2025-10-10T07:15:26.732+05:30  INFO 10844 --- [banking-management-system] [SpringApplicationShutdownHook] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Shutdown completed.
+2025-10-10T07:15:47.833+05:30  INFO 11480 --- [banking-management-system] [restartedMain] com.sanjay.bms.BmsApplication            : Starting BmsApplication using Java 21.0.8 with PID 11480 (D:\Projects\Spring Boot\bms\target\classes started by hp in D:\Projects\Spring Boot\bms)
+2025-10-10T07:15:47.835+05:30 DEBUG 11480 --- [banking-management-system] [restartedMain] com.sanjay.bms.BmsApplication            : Running with Spring Boot v3.5.6, Spring v6.2.11
+2025-10-10T07:15:47.835+05:30  INFO 11480 --- [banking-management-system] [restartedMain] com.sanjay.bms.BmsApplication            : No active profile set, falling back to 1 default profile: "default"
+2025-10-10T07:15:47.906+05:30  INFO 11480 --- [banking-management-system] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : Devtools property defaults active! Set 'spring.devtools.add-properties' to 'false' to disable
+2025-10-10T07:15:47.906+05:30  INFO 11480 --- [banking-management-system] [restartedMain] .e.DevToolsPropertyDefaultsPostProcessor : For additional web related logging consider setting the 'logging.level.web' property to 'DEBUG'
+2025-10-10T07:15:50.232+05:30  INFO 11480 --- [banking-management-system] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2025-10-10T07:15:50.406+05:30  INFO 11480 --- [banking-management-system] [restartedMain] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 141 ms. Found 6 JPA repository interfaces.
+2025-10-10T07:15:51.723+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat initialized with port 8080 (http)
+2025-10-10T07:15:51.750+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.apache.catalina.core.StandardService   : Starting service [Tomcat]
+2025-10-10T07:15:51.750+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.apache.catalina.core.StandardEngine    : Starting Servlet engine: [Apache Tomcat/10.1.46]
+2025-10-10T07:15:51.843+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring embedded WebApplicationContext
+2025-10-10T07:15:51.843+05:30  INFO 11480 --- [banking-management-system] [restartedMain] w.s.c.ServletWebServerApplicationContext : Root WebApplicationContext: initialization completed in 3937 ms
+2025-10-10T07:15:52.191+05:30 DEBUG 11480 --- [banking-management-system] [restartedMain] c.s.b.security.JwtAuthenticationFilter   : Filter 'jwtAuthenticationFilter' configured for use
+2025-10-10T07:15:52.458+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2025-10-10T07:15:52.563+05:30  INFO 11480 --- [banking-management-system] [restartedMain] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.6.29.Final
+2025-10-10T07:15:52.626+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2025-10-10T07:15:53.190+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2025-10-10T07:15:53.271+05:30  INFO 11480 --- [banking-management-system] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2025-10-10T07:15:53.817+05:30  INFO 11480 --- [banking-management-system] [restartedMain] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection org.postgresql.jdbc.PgConnection@656f3d1a
+2025-10-10T07:15:53.826+05:30  INFO 11480 --- [banking-management-system] [restartedMain] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2025-10-10T07:15:53.914+05:30  WARN 11480 --- [banking-management-system] [restartedMain] org.hibernate.orm.deprecation            : HHH90000025: PostgreSQLDialect does not need to be specified explicitly using 'hibernate.dialect' (remove the property setting and it will be selected by default)
+2025-10-10T07:15:53.982+05:30  INFO 11480 --- [banking-management-system] [restartedMain] org.hibernate.orm.connections.pooling    : HHH10001005: Database info:
+	Database JDBC URL [Connecting through datasource 'HikariDataSource (HikariPool-1)']
+	Database driver: undefined/unknown
+	Database version: 17.5
+	Autocommit mode: undefined/unknown
+	Isolation level: undefined/unknown
+	Minimum pool size: undefined/unknown
+	Maximum pool size: undefined/unknown
+2025-10-10T07:15:56.609+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2025-10-10T07:15:57.208+05:30  INFO 11480 --- [banking-management-system] [restartedMain] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2025-10-10T07:15:57.810+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2025-10-10T07:15:59.848+05:30  WARN 11480 --- [banking-management-system] [restartedMain] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2025-10-10T07:15:59.919+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2025-10-10T07:16:00.633+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.b.a.e.web.EndpointLinksResolver      : Exposing 3 endpoints beneath base path '/actuator'
+2025-10-10T07:16:00.745+05:30  INFO 11480 --- [banking-management-system] [restartedMain] eAuthenticationProviderManagerConfigurer : Global AuthenticationManager configured with AuthenticationProvider bean with name authenticationProvider
+2025-10-10T07:16:00.745+05:30  WARN 11480 --- [banking-management-system] [restartedMain] r$InitializeUserDetailsManagerConfigurer : Global AuthenticationManager configured with an AuthenticationProvider bean. UserDetailsService beans will not be used by Spring Security for automatically configuring username/password login. Consider removing the AuthenticationProvider bean. Alternatively, consider using the UserDetailsService in a manually instantiated DaoAuthenticationProvider. If the current configuration is intentional, to turn off this warning, increase the logging level of 'org.springframework.security.config.annotation.authentication.configuration.InitializeUserDetailsBeanManagerConfigurer' to ERROR
+2025-10-10T07:16:00.994+05:30 DEBUG 11480 --- [banking-management-system] [restartedMain] o.s.s.web.DefaultSecurityFilterChain     : Will secure any request with filters: DisableEncodeUrlFilter, WebAsyncManagerIntegrationFilter, SecurityContextHolderFilter, HeaderWriterFilter, CorsFilter, LogoutFilter, JwtAuthenticationFilter, RequestCacheAwareFilter, SecurityContextHolderAwareRequestFilter, AnonymousAuthenticationFilter, SessionManagementFilter, ExceptionTranslationFilter, AuthorizationFilter
+2025-10-10T07:16:01.677+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.b.d.a.OptionalLiveReloadServer       : LiveReload server is running on port 35729
+2025-10-10T07:16:01.850+05:30  INFO 11480 --- [banking-management-system] [restartedMain] o.s.b.w.embedded.tomcat.TomcatWebServer  : Tomcat started on port 8080 (http) with context path '/'
+2025-10-10T07:16:01.883+05:30  INFO 11480 --- [banking-management-system] [restartedMain] com.sanjay.bms.BmsApplication            : Started BmsApplication in 14.722 seconds (process running for 15.481)
+2025-10-10T07:16:05.236+05:30  INFO 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.a.c.c.C.[Tomcat].[localhost].[/]       : Initializing Spring DispatcherServlet 'dispatcherServlet'
+2025-10-10T07:16:05.236+05:30  INFO 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Initializing Servlet 'dispatcherServlet'
+2025-10-10T07:16:05.244+05:30  INFO 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.web.servlet.DispatcherServlet        : Completed initialization in 8 ms
+2025-10-10T07:16:05.295+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.security.web.FilterChainProxy        : Securing GET /
+2025-10-10T07:16:05.316+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2025-10-10T07:16:05.326+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.security.web.FilterChainProxy        : Secured GET /
+2025-10-10T07:16:05.364+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.security.web.FilterChainProxy        : Securing GET /index.html
+2025-10-10T07:16:05.366+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-1] o.s.security.web.FilterChainProxy        : Secured GET /index.html
+2025-10-10T07:16:05.539+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-2] o.s.security.web.FilterChainProxy        : Securing GET /api/profile/dashboard
+2025-10-10T07:16:05.891+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-3] o.s.security.web.FilterChainProxy        : Securing GET /favicon.ico
+2025-10-10T07:16:05.893+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-3] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2025-10-10T07:16:05.907+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-3] o.s.s.w.a.Http403ForbiddenEntryPoint     : Pre-authenticated entry point called. Rejecting access
+2025-10-10T07:16:05.912+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-3] o.s.security.web.FilterChainProxy        : Securing GET /error
+2025-10-10T07:16:05.917+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-3] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2025-10-10T07:16:05.920+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-3] o.s.s.w.a.Http403ForbiddenEntryPoint     : Pre-authenticated entry point called. Rejecting access
+2025-10-10T07:16:06.122+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-2] o.s.security.web.FilterChainProxy        : Secured GET /api/profile/dashboard
+2025-10-10T07:16:06.527+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-4] o.s.security.web.FilterChainProxy        : Securing GET /api/notifications/unread/count
+2025-10-10T07:16:06.557+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-4] o.s.security.web.FilterChainProxy        : Secured GET /api/notifications/unread/count
+2025-10-10T07:16:18.362+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-7] o.s.security.web.FilterChainProxy        : Securing GET /favicon.ico
+2025-10-10T07:16:18.366+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-7] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2025-10-10T07:16:18.368+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-7] o.s.s.w.a.Http403ForbiddenEntryPoint     : Pre-authenticated entry point called. Rejecting access
+2025-10-10T07:16:18.368+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-7] o.s.security.web.FilterChainProxy        : Securing GET /error
+2025-10-10T07:16:18.378+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-7] o.s.s.w.a.AnonymousAuthenticationFilter  : Set SecurityContextHolder to anonymous SecurityContext
+2025-10-10T07:16:18.384+05:30 DEBUG 11480 --- [banking-management-system] [http-nio-8080-exec-7] o.s.s.w.a.Http403ForbiddenEntryPoint     : Pre-authenticated entry point called. Rejecting access

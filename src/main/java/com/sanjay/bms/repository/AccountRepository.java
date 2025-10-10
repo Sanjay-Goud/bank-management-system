@@ -13,7 +13,11 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     Optional<Account> findByAccountNumber(String accountNumber);
     List<Account> findByAccountTypeIgnoreCase(String accountType);
     List<Account> findByBalanceGreaterThanEqual(BigDecimal balance);
-    List<Account> findByUserId(Long userId);
+
+    // FIXED: Added this method
+    List<Account> findByUser_Id(Long userId);
+
+   // List<Account> findByUserId(Long userId);
     List<Account> findByAccountStatus(String status);
 
     @Query("SELECT COUNT(a) FROM Account a WHERE a.accountStatus = :status")

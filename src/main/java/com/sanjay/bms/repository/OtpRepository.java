@@ -20,9 +20,7 @@ public interface OtpRepository extends JpaRepository<Otp, Long> {
 
     @Query("SELECT o FROM Otp o WHERE o.user.id = :userId AND o.purpose = :purpose " +
             "ORDER BY o.createdAt DESC LIMIT 1")
-    Optional<Otp> findLatestByUserAndPurpose(
-            @Param("userId") Long userId,
-            @Param("purpose") String purpose);
+    Optional<Otp> findFirstByUserIdAndPurposeOrderByCreatedAtDesc(Long userId, String purpose);
 
     @Query("SELECT o FROM Otp o WHERE o.user.id = :userId AND o.otpCode = :otpCode " +
             "AND o.relatedTransactionRef = :transactionRef AND o.isUsed = false")

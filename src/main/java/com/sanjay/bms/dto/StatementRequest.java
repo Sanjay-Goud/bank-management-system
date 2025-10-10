@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 @Setter
 @Getter
+@Data
 @AllArgsConstructor
 @NoArgsConstructor
 public class StatementRequest {

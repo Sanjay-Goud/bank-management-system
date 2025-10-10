@@ -23,4 +23,8 @@ public class TransactionStatsDto {
     private BigDecimal smallestTransaction;
     private LocalDateTime startDate;
     private LocalDateTime endDate;
+    private BigDecimal totalDebit;
+    private BigDecimal totalCredit;
+    private BigDecimal netAmount;
+    private Long totalCount;
 }

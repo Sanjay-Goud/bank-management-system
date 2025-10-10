@@ -19,7 +19,7 @@ public class CorsConfig {
         config.setAllowCredentials(true);
 
         // Specify allowed origins (your frontend URL)
-        config.setAllowedOrigins(Arrays.asList("http://localhost:8080"));
+        config.setAllowedOrigins(Arrays.asList("https://banking-management-system-w35p.onrender.com"));
 
         // Allow all headers
         config.addAllowedHeader("*");

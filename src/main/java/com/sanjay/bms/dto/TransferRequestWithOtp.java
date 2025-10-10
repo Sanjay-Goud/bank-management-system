@@ -13,5 +13,6 @@ public class TransferRequestWithOtp {
     private String toAccountNumber;
     private BigDecimal amount;
     private String description;
+    private String transactionRef;
     private String otpCode; // For high-value transactions
 }

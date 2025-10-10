@@ -13,7 +13,8 @@ public interface AuditLogRepository extends JpaRepository<AuditLog, Long> {
     List<AuditLog> findBySeverityOrderByTimestampDesc(String severity);
     List<AuditLog> findByTimestampBetweenOrderByTimestampDesc(LocalDateTime start, LocalDateTime end);
 
-    @Query(value = "SELECT * FROM audit_log ORDER BY timestamp DESC LIMIT :limit", nativeQuery = true)
+    // FIXED: Changed table name from 'audit_log' to 'audit_logs' to match entity
+    @Query(value = "SELECT * FROM audit_logs ORDER BY timestamp DESC LIMIT :limit", nativeQuery = true)
     List<AuditLog> findTopNByOrderByTimestampDesc(@Param("limit") int limit);
 
     @Query("SELECT a FROM AuditLog a WHERE a.username = :username AND a.severity = :severity " +

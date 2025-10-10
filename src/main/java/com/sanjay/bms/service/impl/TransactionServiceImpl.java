@@ -10,6 +10,7 @@ import com.sanjay.bms.repository.AccountRepository;
 import com.sanjay.bms.repository.TransactionRepository;
 import com.sanjay.bms.repository.UserRepository;
 import com.sanjay.bms.service.TransactionService;
+import com.sanjay.bms.service.OtpService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +31,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TransactionRepository transactionRepository;
     private final AccountRepository accountRepository;
     private final UserRepository userRepository;
+    private final OtpService otpService;
 
     @Override
     public List<TransactionDto> getTransactionsByAccountId(Long accountId) {
@@ -173,8 +175,6 @@ public class TransactionServiceImpl implements TransactionService {
         transactionRepository.save(transaction);
     }
 
-    // NEW METHODS IMPLEMENTATION
-
     @Override
     public List<TransactionDto> getAccountTransactions(Long accountId, String username) {
         // Verify user owns this account
@@ -212,17 +212,59 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public TransactionDto transferFunds(TransferRequestWithOtp request, String username, HttpServletRequest httpRequest) {
-        // TODO: Implement OTP validation here
-        // For now, delegate to existing transferFunds method
         log.info("Transfer with OTP from user: {}", username);
 
-        TransferRequest basicRequest = new TransferRequest();
-        basicRequest.setFromAccountNumber(request.getFromAccountNumber());
-        basicRequest.setToAccountNumber(request.getToAccountNumber());
-        basicRequest.setAmount(request.getAmount());
-        basicRequest.setDescription(request.getDescription());
+        // Validate user
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        return transferFunds(basicRequest);
+        // Verify OTP
+        if (request.getOtpCode() == null || request.getTransactionRef() == null) {
+            throw new IllegalArgumentException("OTP code and transaction reference are required");
+        }
+
+        if (!otpService.verifyTransactionOtp(user, request.getOtpCode(), request.getTransactionRef())) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+
+        // Find the pending transaction
+        Transaction pendingTransaction = transactionRepository.findByReferenceNumber(request.getTransactionRef())
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+
+        if (!"PENDING".equals(pendingTransaction.getStatus())) {
+            throw new IllegalArgumentException("Transaction is not in PENDING state");
+        }
+
+        // Get accounts
+        Account fromAccount = accountRepository.findById(pendingTransaction.getAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Source account not found"));
+
+        Account toAccount = accountRepository.findById(pendingTransaction.getToAccountId())
+                .orElseThrow(() -> new ResourceNotFoundException("Destination account not found"));
+
+        // Verify ownership again
+        if (!fromAccount.getUserId().equals(user.getId())) {
+            throw new IllegalArgumentException("You don't own the source account");
+        }
+
+        // Check balance again (in case it changed)
+        if (fromAccount.getBalance().compareTo(pendingTransaction.getAmount()) < 0) {
+            pendingTransaction.setStatus("FAILED");
+            transactionRepository.save(pendingTransaction);
+            throw new IllegalArgumentException("Insufficient balance");
+        }
+
+        // Complete the transfer
+        TransferRequest basicRequest = new TransferRequest();
+        basicRequest.setFromAccountNumber(fromAccount.getAccountNumber());
+        basicRequest.setToAccountNumber(toAccount.getAccountNumber());
+        basicRequest.setAmount(pendingTransaction.getAmount());
+        basicRequest.setDescription(pendingTransaction.getDescription());
+
+        completeTransfer(pendingTransaction, fromAccount, toAccount, basicRequest);
+
+        log.info("Transfer completed with OTP. Reference: {}", request.getTransactionRef());
+        return TransactionMapper.mapToTransactionDto(pendingTransaction);
     }
 
     @Override
@@ -288,21 +330,32 @@ public class TransactionServiceImpl implements TransactionService {
         BigDecimal highValueThreshold = new BigDecimal("25000");
         if (request.getAmount().compareTo(highValueThreshold) > 0) {
             // Generate and send OTP
-            // Note: You need to inject OtpService for this
-            // otpService.generateTransactionOtp(user, transactionRef);
+            otpService.generateTransactionOtp(user, transactionRef);
 
             log.info("High-value transfer initiated. OTP sent. Ref: {}", transactionRef);
-            return "Transfer initiated successfully. Reference: " + transactionRef +
-                    ". OTP has been sent to your registered email. Please provide OTP to complete the transfer.";
+            return transactionRef;
         }
 
         // For low-value transfers, complete immediately
+        completeTransfer(pendingTransaction, fromAccount, toAccount, request);
+
+        log.info("Transfer completed immediately. Reference: {}", transactionRef);
+        return transactionRef;
+    }
+
+    private void completeTransfer(Transaction pendingTransaction, Account fromAccount,
+                                  Account toAccount, TransferRequest request) {
+        // Update pending transaction status
         pendingTransaction.setStatus("SUCCESS");
 
         // Debit from source
         BigDecimal newFromBalance = fromAccount.getBalance().subtract(request.getAmount());
         fromAccount.setBalance(newFromBalance);
         accountRepository.save(fromAccount);
+
+        // Update debit transaction with actual balance
+        pendingTransaction.setBalanceAfter(newFromBalance);
+        transactionRepository.save(pendingTransaction);
 
         // Credit to destination
         BigDecimal newToBalance = toAccount.getBalance().add(request.getAmount());
@@ -318,13 +371,12 @@ public class TransactionServiceImpl implements TransactionService {
         creditTransaction.setDescription("Transfer from " + fromAccount.getAccountNumber() +
                 (request.getDescription() != null ? " - " + request.getDescription() : ""));
         creditTransaction.setTransactionDate(LocalDateTime.now());
-        creditTransaction.setReferenceNumber(transactionRef);
+        creditTransaction.setReferenceNumber(pendingTransaction.getReferenceNumber());
         creditTransaction.setToAccountId(fromAccount.getId());
         creditTransaction.setStatus("SUCCESS");
         transactionRepository.save(creditTransaction);
 
-        log.info("Transfer completed immediately. Reference: {}", transactionRef);
-        return "Transfer completed successfully. Reference: " + transactionRef;
+        log.info("Transfer completed. Reference: {}", pendingTransaction.getReferenceNumber());
     }
 
     @Override
@@ -337,7 +389,6 @@ public class TransactionServiceImpl implements TransactionService {
                 .map(Account::getId)
                 .collect(Collectors.toList());
 
-        // TODO: Implement actual filtering based on filter criteria
         List<Transaction> transactions = transactionRepository.findByAccountIdInOrderByTransactionDateDesc(accountIds);
 
         return transactions.stream()
@@ -357,7 +408,6 @@ public class TransactionServiceImpl implements TransactionService {
 
         List<Transaction> transactions = transactionRepository.findByAccountIdInOrderByTransactionDateDesc(accountIds);
 
-        // Simple search in description and reference number
         return transactions.stream()
                 .filter(t -> t.getDescription().toLowerCase().contains(searchTerm.toLowerCase()) ||
                         t.getReferenceNumber().toLowerCase().contains(searchTerm.toLowerCase()))

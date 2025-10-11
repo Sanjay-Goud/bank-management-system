@@ -351,6 +351,7 @@ public class TransactionServiceImpl implements TransactionService {
         // Debit from source
         BigDecimal newFromBalance = fromAccount.getBalance().subtract(request.getAmount());
         fromAccount.setBalance(newFromBalance);
+        fromAccount.setLastTransactionDate(LocalDateTime.now());
         accountRepository.save(fromAccount);
 
         // Update debit transaction with actual balance
@@ -360,6 +361,7 @@ public class TransactionServiceImpl implements TransactionService {
         // Credit to destination
         BigDecimal newToBalance = toAccount.getBalance().add(request.getAmount());
         toAccount.setBalance(newToBalance);
+        toAccount.setLastTransactionDate(LocalDateTime.now());
         accountRepository.save(toAccount);
 
         // Create credit transaction

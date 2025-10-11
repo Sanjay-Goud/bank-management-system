@@ -1548,7 +1548,12 @@
             showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`);
             closeModal('depositWithdrawModal');
             document.getElementById('dwAmount').value = '';
-            loadUserDashboard();
+
+            // Reload all data to reflect changes
+            await loadUserDashboard();
+            if (document.getElementById('userAccountsContent').classList.contains('hidden') === false) {
+                await loadAccountsPage();
+            }
         } catch (err) {
             showAlert(err.message, 'error');
         }

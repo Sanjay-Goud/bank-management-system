@@ -330,16 +330,27 @@ public class TransactionServiceImpl implements TransactionService {
         BigDecimal highValueThreshold = new BigDecimal("25000");
         if (request.getAmount().compareTo(highValueThreshold) > 0) {
             // Generate and send OTP
-            otpService.generateTransactionOtp(user, transactionRef);
+            log.info("High-value transfer detected. Generating OTP for transaction: {}", transactionRef);
 
-            log.info("High-value transfer initiated. OTP sent. Ref: {}", transactionRef);
-            return transactionRef;
+            try {
+                // Generate and send OTP
+                String otpCode = otpService.generateTransactionOtp(user, transactionRef);
+                log.info("OTP generated successfully: {} (length: {})", otpCode, otpCode.length());
+
+                // Send email with OTP
+                log.info("Sending OTP email to: {}", user.getEmail());
+
+                return transactionRef;
+            } catch (Exception e) {
+                log.error("Failed to generate/send OTP: {}", e.getMessage(), e);
+                throw new RuntimeException("Failed to generate OTP. Please try again.");
+            }
         }
 
         // For low-value transfers, complete immediately
+        log.info("Low-value transfer. Completing immediately.");
         completeTransfer(pendingTransaction, fromAccount, toAccount, request);
 
-        log.info("Transfer completed immediately. Reference: {}", transactionRef);
         return transactionRef;
     }
 

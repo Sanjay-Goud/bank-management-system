@@ -1647,56 +1647,42 @@
             description: document.getElementById('transferDescription').value
         };
 
+        // Validate inputs
+        if (!transferData.fromAccountNumber || !transferData.toAccountNumber) {
+            showAlert('Please select accounts', 'error');
+            return;
+        }
+
+        if (transferData.amount <= 0) {
+            showAlert('Please enter a valid amount', 'error');
+            return;
+        }
+
         // Step 1: Initiate transfer
         const response = await apiCall('/transactions/transfer/initiate', {
             method: 'POST',
             body: JSON.stringify(transferData)
         });
 
-        // Step 2: Check if OTP is required (transaction reference returned)
-        if (response && typeof response === 'string') {
-            // High-value transaction - OTP required
-            const transactionRef = response;
+        console.log('Initiate response:', response); // Debug log
+
+        // Step 2: Check if OTP is required
+        if (response && response.requiresOtp === 'true') {
+            const transactionRef = response.message;
 
             showAlert('OTP has been sent to your registered email', 'success');
 
-            // Prompt for OTP
-            const otp = prompt(`Transfer amount exceeds ₹25,000.\n\nAn OTP has been sent to your registered email.\n\nTransaction Reference: ${transactionRef}\n\nPlease enter OTP to complete the transfer:`);
-
-            if (!otp) {
-                showAlert('Transfer cancelled', 'error');
-                return;
-            }
-
-            // Step 3: Complete transfer with OTP
-            const otpData = {
-                fromAccountNumber: transferData.fromAccountNumber,
-                toAccountNumber: transferData.toAccountNumber,
-                amount: transferData.amount,
-                description: transferData.description,
-                transactionRef: transactionRef,
-                otpCode: otp
-            };
-
-            await apiCall('/transactions/transfer', {
-                method: 'POST',
-                body: JSON.stringify(otpData)
-            });
-
-            showAlert('Transfer completed successfully!');
+            // Show OTP modal instead of prompt
+            showOtpModal(transactionRef, transferData);
         } else {
             // Low-value transaction - completed immediately
             showAlert('Transfer completed successfully!');
+            clearTransferForm();
+            loadUserDashboard();
         }
 
-        // Clear form
-        document.getElementById('transferAmount').value = '';
-        document.getElementById('transferDescription').value = '';
-
-        // Reload dashboard
-        loadUserDashboard();
-
     } catch (err) {
+        console.error('Transfer error:', err);
         showAlert(err.message || 'Transfer failed', 'error');
     }
 }

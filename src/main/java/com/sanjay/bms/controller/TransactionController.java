@@ -14,6 +14,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -61,11 +62,15 @@ public class TransactionController {
             @RequestBody TransferRequest request,
             Authentication authentication) {
         String username = authentication.getName();
-        String message = transactionService.initiateTransfer(request, username);
+        String transactionRef = transactionService.initiateTransfer(request, username);
+
+        // Check if OTP is required (high-value transaction)
+        boolean requiresOtp = request.getAmount().compareTo(new BigDecimal("25000")) > 0;
+
         return ResponseEntity.ok(Map.of(
-                "message", message,
-                "status", "INITIATED",
-                "requiresOtp", message.contains("OTP") ? "true" : "false"
+                "message", transactionRef,
+                "status", requiresOtp ? "PENDING" : "SUCCESS",
+                "requiresOtp", requiresOtp ? "true" : "false"
         ));
     }
 

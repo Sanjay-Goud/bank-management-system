@@ -2734,28 +2734,88 @@ function clearTransferForm() {
     }
 
     // Add loading spinner
+     let loadingTimeout;
+    let activeRequests = 0;
+
     function showLoading() {
-        const spinner = document.createElement('div');
-        spinner.id = 'loadingSpinner';
-        spinner.innerHTML = '<div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 9999; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.3);">Loading...</div>';
-        document.body.appendChild(spinner);
+        activeRequests++;
+        if (activeRequests === 1) {
+            // Only show spinner after 300ms delay (prevents flash for fast requests)
+            loadingTimeout = setTimeout(() => {
+                if (activeRequests > 0 && !document.getElementById('loadingSpinner')) {
+                    const spinner = document.createElement('div');
+                    spinner.id = 'loadingSpinner';
+                    spinner.innerHTML = `
+                        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                                    z-index: 9999; background: white; padding: 20px; border-radius: 8px;
+                                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                            <div class="spinner"></div>
+                            <p style="margin-top: 10px; text-align: center;">Loading...</p>
+                        </div>
+                    `;
+                    document.body.appendChild(spinner);
+                }
+            }, 300);
+        }
     }
 
     function hideLoading() {
-        const spinner = document.getElementById('loadingSpinner');
-        if (spinner) spinner.remove();
+        activeRequests--;
+        if (activeRequests <= 0) {
+            activeRequests = 0;
+            clearTimeout(loadingTimeout);
+            const spinner = document.getElementById('loadingSpinner');
+            if (spinner) spinner.remove();
+        }
     }
 
     // Enhanced API call with loading
     const originalApiCall = apiCall;
-    apiCall = async function(...args) {
-        showLoading();
+    apiCall = async function(endpoint, options = {}) {
+        const method = options.method || 'GET';
+        const isRead = method === 'GET';
+
+        // Use lightweight progress bar for read operations
+        // Use full loading for write operations (POST, PUT, DELETE)
+        if (isRead) {
+            showProgressBar();
+        } else {
+            showLoading();
+        }
+
         try {
-            return await originalApiCall(...args);
+            return await originalApiCall(endpoint, options);
         } finally {
-            hideLoading();
+            if (isRead) {
+                hideProgressBar();
+            } else {
+                hideLoading();
+            }
         }
     };
+
+
+     function showProgressBar() {
+        if (!document.getElementById('progressBar')) {
+            const bar = document.createElement('div');
+            bar.id = 'progressBar';
+            bar.style.cssText = `
+                position: fixed; top: 0; left: 0; width: 0; height: 3px;
+                background: linear-gradient(90deg, #0052CC, #00B8D4);
+                z-index: 9999; transition: width 0.3s ease;
+            `;
+            document.body.appendChild(bar);
+            setTimeout(() => bar.style.width = '70%', 10);
+        }
+    }
+
+    function hideProgressBar() {
+        const bar = document.getElementById('progressBar');
+        if (bar) {
+            bar.style.width = '100%';
+            setTimeout(() => bar.remove(), 300);
+        }
+    }
 
 
 

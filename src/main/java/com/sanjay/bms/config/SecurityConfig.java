@@ -33,7 +33,7 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(12); // Stronger encryption
+        return new BCryptPasswordEncoder(12);
     }
 
     @Bean
@@ -50,38 +50,6 @@ public class SecurityConfig {
         return authConfig.getAuthenticationManager();
     }
 
-//    @Bean
-//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-//        http
-//                .csrf(csrf -> csrf.disable())
-//                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-//                .sessionManagement(session ->
-//                        session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-//                .authorizeHttpRequests(auth -> auth
-//                        // Public endpoints
-//                        .requestMatchers("/api/auth/**").permitAll()
-//                        .requestMatchers("/api/public/**").permitAll()
-//
-//                        // User endpoints
-//                        .requestMatchers("/api/accounts/**").authenticated()
-//                        .requestMatchers("/api/transactions/**").authenticated()
-//                        .requestMatchers("/api/profile/**").authenticated()
-//                        .requestMatchers("/api/directory/**").authenticated()
-//                        .requestMatchers("/api/statistics/**").authenticated()
-//                        .requestMatchers("/api/notifications/**").authenticated()
-//
-//                        // Admin endpoints
-//                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
-//
-//                        // Default
-//                        .anyRequest().authenticated()
-//                )
-//                .authenticationProvider(authenticationProvider())
-//                .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
-//
-//        return http.build();
-//    }
-
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
@@ -95,6 +63,9 @@ public class SecurityConfig {
                                 "/", "/index.html", "/dashboard.html",
                                 "/css/**", "/js/**", "/images/**", "/static/**"
                         ).permitAll()
+
+                        // ✅ ADDED: Allow test endpoints (for email testing)
+                        .requestMatchers("/api/test/**").permitAll()
 
                         // Public endpoints
                         .requestMatchers("/api/auth/**", "/api/public/**").permitAll()
@@ -119,12 +90,10 @@ public class SecurityConfig {
         return http.build();
     }
 
-
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Use setAllowedOrigins instead of setAllowedOriginPatterns when you have specific origins
         configuration.setAllowedOrigins(Arrays.asList(
                 "http://localhost:8080",
                 "http://127.0.0.1:8080",
@@ -142,7 +111,4 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", configuration);
         return source;
     }
-
-
-
 }

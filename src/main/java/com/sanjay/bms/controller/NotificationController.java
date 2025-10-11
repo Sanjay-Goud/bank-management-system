@@ -10,6 +10,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @AllArgsConstructor
@@ -46,22 +47,23 @@ public class NotificationController {
         return ResponseEntity.ok((long) unreadNotifications.size());
     }
 
+    // Update NotificationController.java
     @PutMapping("/{id}/read")
-    public ResponseEntity<String> markAsRead(@PathVariable Long id, Authentication authentication) {
+    public ResponseEntity<Map<String, String>> markAsRead(@PathVariable Long id, Authentication authentication) {
         String username = authentication.getName();
         log.info("Marking notification {} as read for user: {}", id, username);
 
         userProfileService.markNotificationAsRead(id);
-        return ResponseEntity.ok("Notification marked as read");
+        return ResponseEntity.ok(Map.of("message", "Notification marked as read"));
     }
 
     @PutMapping("/read-all")
-    public ResponseEntity<String> markAllAsRead(Authentication authentication) {
+    public ResponseEntity<Map<String, String>> markAllAsRead(Authentication authentication) {
         String username = authentication.getName();
         log.info("Marking all notifications as read for user: {}", username);
 
         userProfileService.markAllNotificationsAsRead(username);
-        return ResponseEntity.ok("All notifications marked as read");
+        return ResponseEntity.ok(Map.of("message", "All notifications marked as read"));
     }
 
     @DeleteMapping("/{id}")

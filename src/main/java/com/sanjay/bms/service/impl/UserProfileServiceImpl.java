@@ -7,6 +7,7 @@ import com.sanjay.bms.entity.User;
 import com.sanjay.bms.exception.ResourceNotFoundException;
 import com.sanjay.bms.mapper.AccountMapper;
 import com.sanjay.bms.mapper.NotificationMapper;
+import com.sanjay.bms.mapper.TransactionMapper;
 import com.sanjay.bms.mapper.UserMapper;
 import com.sanjay.bms.repository.AccountRepository;
 import com.sanjay.bms.repository.NotificationRepository;
@@ -14,6 +15,9 @@ import com.sanjay.bms.repository.TransactionRepository;
 import com.sanjay.bms.repository.UserRepository;
 import com.sanjay.bms.security.PasswordValidator;
 import com.sanjay.bms.service.*;
+
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.CacheEvict;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -197,14 +202,17 @@ public class UserProfileServiceImpl implements UserProfileService {
 
     // Replace the getUserDashboard method with this corrected version:
 
+    // Add this to UserProfileServiceImpl.java
+
     @Override
+    @Cacheable(value = "userDashboard", key = "#username")
     public DashboardDto getUserDashboard(String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
         DashboardDto dashboard = new DashboardDto();
 
-        // Get accounts
+        // Single query to get all user accounts
         List<Account> accounts = accountRepository.findByUser_Id(user.getId());
         List<AccountDto> accountDtos = accounts.stream()
                 .map(AccountMapper::mapToAccountDto)
@@ -223,21 +231,29 @@ public class UserProfileServiceImpl implements UserProfileService {
                 .count();
         dashboard.setActiveAccounts(activeAccounts);
 
-        // Today's transactions count
+        // Optimized transaction query - get today's count only
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         Long todayTxns = transactionRepository.countTransactionsSince(startOfDay);
         dashboard.setTodayTransactions(todayTxns);
 
-        // Recent transactions (last 10) - FIXED
-        List<TransactionDto> recentTxns = accounts.stream()
-                .flatMap(acc -> transactionRepository
-                        .findByAccountIdOrderByTransactionDateDesc(acc.getId()).stream())  // ✅ Now uses acc.getId() which returns account ID
-                .limit(10)
-                .map(com.sanjay.bms.mapper.TransactionMapper::mapToTransactionDto)
-                .collect(Collectors.toList());
-        dashboard.setRecentTransactions(recentTxns);
+        // Get recent transactions - FIXED: Use account IDs properly
+        if (!accounts.isEmpty()) {
+            List<Long> accountIds = accounts.stream()
+                    .map(Account::getId)
+                    .collect(Collectors.toList());
 
-        // Unread notifications
+            List<TransactionDto> recentTxns = transactionRepository
+                    .findByAccountIdInOrderByTransactionDateDesc(accountIds)
+                    .stream()
+                    .limit(10)
+                    .map(TransactionMapper::mapToTransactionDto)
+                    .collect(Collectors.toList());
+            dashboard.setRecentTransactions(recentTxns);
+        } else {
+            dashboard.setRecentTransactions(new ArrayList<>());
+        }
+
+        // Get unread notifications
         List<Notification> unreadNotifs = notificationRepository
                 .findByUserAndIsReadFalseOrderByCreatedAtDesc(user);
         dashboard.setUnreadNotifications(unreadNotifs.stream()

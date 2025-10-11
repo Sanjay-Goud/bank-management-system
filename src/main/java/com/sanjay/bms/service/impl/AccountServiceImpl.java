@@ -15,6 +15,7 @@ import com.sanjay.bms.service.TransactionService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -187,6 +188,7 @@ public class AccountServiceImpl implements AccountService {
     // ✅ UPDATED: deposit with username and request
     @Override
     @Transactional
+    @CacheEvict(value = "userDashboard", key = "#username")
     public AccountDto deposit(Long id, BigDecimal amount, String username, HttpServletRequest request) {
         log.info("Processing deposit for account ID: {}, amount: {}, user: {}", id, amount, username);
 
@@ -234,6 +236,7 @@ public class AccountServiceImpl implements AccountService {
     // ✅ UPDATED: withdraw with username and request
     @Override
     @Transactional
+    @CacheEvict(value = "userDashboard", key = "#username")
     public AccountDto withdraw(Long id, BigDecimal amount, String username, HttpServletRequest request) {
         log.info("Processing withdrawal for account ID: {}, amount: {}, user: {}", id, amount, username);
 

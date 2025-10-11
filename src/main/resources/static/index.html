@@ -1997,10 +1997,26 @@ function clearTransferForm() {
 
     async function markNotificationRead(id) {
         try {
-            await apiCall(`/notifications/${id}/read`, { method: 'PUT' });
-            showNotifications();
+            showProgressBar(); // Subtle progress indicator
+
+            const response = await fetch(`${API_BASE}/notifications/${id}/read`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error('Failed to mark notification as read');
+            }
+
+            hideProgressBar();
+            showAlert('Notification marked as read', 'success');
+            showNotifications(); // Reload notifications
             updateNotificationBadge();
         } catch (err) {
+            hideProgressBar();
             showAlert(err.message, 'error');
         }
     }

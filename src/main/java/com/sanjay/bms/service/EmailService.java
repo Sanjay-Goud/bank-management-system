@@ -9,9 +9,17 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import jakarta.mail.internet.MimeMessage;
 
+
+import sendinblue.ApiClient;
+import sendinblue.Configuration;
+import sendinblue.auth.ApiKeyAuth;
+import sibApi.TransactionalEmailsApi;
+import sibModel.*;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.Collections;
 
 @Slf4j
 @AllArgsConstructor
@@ -19,7 +27,7 @@ import java.time.format.DateTimeFormatter;
 public class EmailService {
 
     private final JavaMailSender mailSender;
-    private static final String FROM_EMAIL = "noreply@bankingapp.com";
+    private static final String FROM_EMAIL = "sanjaygoud902@gmail.com";
 
     @Async
     public void sendSimpleEmail(String to, String subject, String text) {
@@ -38,6 +46,15 @@ public class EmailService {
 
     @Async
     public void sendHtmlEmail(String to, String subject, String htmlContent) {
+        // Try Brevo API first
+        try {
+            sendViaBrevoApi(to, subject, htmlContent);
+            return; // Success, exit early
+        } catch (Exception e) {
+            log.warn("⚠️ Brevo API failed, trying SMTP fallback: {}", e.getMessage());
+        }
+
+        // Fallback to SMTP if API fails
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -48,11 +65,55 @@ public class EmailService {
             helper.setText(htmlContent, true);
 
             mailSender.send(message);
-            log.info("HTML email sent to: {}", to);
+            log.info("✅ HTML email sent via SMTP to: {}", to);
         } catch (Exception e) {
-            log.error("Failed to send HTML email to {}: {}", to, e.getMessage());
+            log.error("❌ Failed to send HTML email via SMTP to {}: {}", to, e.getMessage());
+            throw new RuntimeException("Email sending completely failed", e);
         }
     }
+
+    private void sendViaBrevoApi(String to, String subject, String htmlContent) {
+        try {
+            // Get API key from environment variable
+            String apiKey = System.getenv("BREVO_API_KEY");
+            if (apiKey == null || apiKey.isEmpty()) {
+                throw new RuntimeException("BREVO_API_KEY not configured");
+            }
+
+            // Configure API client
+            ApiClient defaultClient = Configuration.getDefaultApiClient();
+            ApiKeyAuth auth = (ApiKeyAuth) defaultClient.getAuthentication("api-key");
+            auth.setApiKey(apiKey);
+
+            // Create email API instance
+            TransactionalEmailsApi api = new TransactionalEmailsApi();
+
+            // Set sender
+            SendSmtpEmailSender sender = new SendSmtpEmailSender();
+            sender.setEmail(FROM_EMAIL);
+            sender.setName("Banking App");
+
+            // Set recipient
+            SendSmtpEmailTo recipient = new SendSmtpEmailTo();
+            recipient.setEmail(to);
+
+            // Build email
+            SendSmtpEmail email = new SendSmtpEmail();
+            email.setSender(sender);
+            email.setTo(Collections.singletonList(recipient));
+            email.setSubject(subject);
+            email.setHtmlContent(htmlContent);
+
+            // Send email
+            CreateSmtpEmail response = api.sendTransacEmail(email);
+            log.info("✅ Email sent via Brevo API to: {} (Message ID: {})", to, response.getMessageId());
+
+        } catch (Exception e) {
+            log.error("❌ Failed to send email via Brevo API: {}", e.getMessage(), e);
+            throw new RuntimeException("Brevo API email failed", e);
+        }
+    }
+
 
     @Async
     public void sendWelcomeEmail(String to, String fullName, String username) {

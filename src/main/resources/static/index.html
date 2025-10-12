@@ -2868,7 +2868,7 @@ function clearTransferForm() {
     // Enhanced API call with loading
     const originalApiCall = apiCall;
 
-let activeRequests = 0;
+activeRequests = 0;
 let loadingTimeout = null;
 
 apiCall = async function(endpoint, options = {}) {
@@ -2963,12 +2963,274 @@ apiCall = async function(endpoint, options = {}) {
     }
 
 
-
-
-
     console.log('Banking Management System Loaded Successfully');
     console.log('Version: 1.0.0');
     console.log('Features: User Dashboard, Admin Dashboard, Transfers, Transactions, Notifications, 2FA, Audit Logs');
+
+   (function() {
+    'use strict';
+
+    console.log('🔧 Applying safe frontend fixes...');
+
+    // Store the original apiCall if not already stored
+    if (!window._originalApiCall) {
+        window._originalApiCall = window.apiCall;
+    }
+
+    // ✅ FIXED: Enhanced API call with better error handling
+    window.apiCall = async function(endpoint, options = {}) {
+        const method = options.method || 'GET';
+        const isRead = method === 'GET';
+
+        // Show appropriate loading indicator
+        if (isRead) {
+            showProgressBar();
+        } else {
+            showLoading();
+        }
+
+        try {
+            const token = localStorage.getItem('token');
+            const headers = {
+                'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` })
+            };
+
+            console.log(`🔵 API Call: ${method} ${endpoint}`);
+
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...options,
+                headers: { ...headers, ...options.headers }
+            });
+
+            console.log(`📡 Response status: ${response.status}`);
+
+            if (response.status === 401) {
+                console.error('❌ Unauthorized - logging out');
+                logout();
+                throw new Error('Session expired. Please login again.');
+            }
+
+            // ✅ FIXED: Handle empty responses (like from DELETE operations)
+            const contentType = response.headers.get('content-type');
+            let data = null;
+
+            if (contentType && contentType.includes('application/json')) {
+                const text = await response.text();
+                if (text && text.trim()) {
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        console.warn('Failed to parse JSON:', text);
+                        data = { message: text };
+                    }
+                }
+            } else {
+                const text = await response.text();
+                if (text && text.trim()) {
+                    data = { message: text };
+                }
+            }
+
+            if (!response.ok) {
+                const errorMessage = data?.message || data?.error || `Request failed with status ${response.status}`;
+                console.error(`❌ API Error: ${errorMessage}`);
+                throw new Error(errorMessage);
+            }
+
+            console.log('✅ API Call successful');
+            return data;
+
+        } catch (error) {
+            console.error('🔴 API Call failed:', error);
+            throw error;
+        } finally {
+            if (isRead) {
+                hideProgressBar();
+            } else {
+                hideLoading();
+            }
+        }
+    };
+
+    // ✅ FIXED: Enhanced deposit/withdraw handler
+    window.handleDepositWithdraw = async function(e) {
+        e.preventDefault();
+
+        const accountId = document.getElementById('dwAccountId').value;
+        const type = document.getElementById('dwType').value;
+        const amount = parseFloat(document.getElementById('dwAmount').value);
+
+        console.log(`🔵 START: ${type} - Account: ${accountId}, Amount: ${amount}`);
+
+        if (!amount || amount <= 0) {
+            showAlert('Please enter a valid amount greater than zero', 'error');
+            return;
+        }
+
+        try {
+            console.log(`📡 Sending ${type} request...`);
+
+            const result = await apiCall(`/accounts/id/${accountId}/${type}`, {
+                method: 'PUT',
+                body: JSON.stringify({ amount })
+            });
+
+            console.log('✅ Operation successful:', result);
+
+            showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`, 'success');
+
+            closeModal('depositWithdrawModal');
+            document.getElementById('dwAmount').value = '';
+
+            // Reload data
+            await loadUserDashboard();
+
+            // Reload accounts page if currently viewing it
+            if (!document.getElementById('userAccountsContent').classList.contains('hidden')) {
+                await loadAccountsPage();
+            }
+
+        } catch (err) {
+            console.error(`🔴 ${type} failed:`, err);
+            showAlert(err.message || `${type} failed. Please try again.`, 'error');
+        }
+    };
+
+    // ✅ FIXED: Admin freeze account
+    window.showFreezeModal = function(accountId) {
+        document.getElementById('adminActionTitle').textContent = 'Freeze Account';
+        document.getElementById('adminActionType').value = 'freeze';
+        document.getElementById('adminActionTarget').value = accountId;
+        document.getElementById('adminActionReason').value = '';
+        document.getElementById('adminActionModal').style.display = 'block';
+    };
+
+    // ✅ FIXED: Admin actions handler
+    window.handleAdminAction = async function(e) {
+        e.preventDefault();
+
+        const type = document.getElementById('adminActionType').value;
+        const accountId = document.getElementById('adminActionTarget').value;
+        const reason = document.getElementById('adminActionReason').value;
+
+        console.log(`🔵 Admin Action: ${type} - Account: ${accountId}`);
+
+        if (!reason || reason.trim().length === 0) {
+            showAlert('Please provide a reason', 'error', 'adminAlertContainer');
+            return;
+        }
+
+        try {
+            console.log(`📡 Sending admin ${type} request...`);
+
+            await apiCall(`/admin/accounts/${type}`, {
+                method: 'POST',
+                body: JSON.stringify({
+                    accountId: parseInt(accountId),
+                    reason
+                })
+            });
+
+            console.log(`✅ Account ${type}d successfully`);
+
+            showAlert(`Account ${type}d successfully!`, 'success', 'adminAlertContainer');
+
+            closeModal('adminActionModal');
+            document.getElementById('adminActionReason').value = '';
+
+            // Reload admin accounts
+            await loadAdminAccounts();
+
+        } catch (err) {
+            console.error(`🔴 Admin ${type} failed:`, err);
+            showAlert(err.message || `Failed to ${type} account`, 'error', 'adminAlertContainer');
+        }
+    };
+
+    // ✅ FIXED: Unfreeze account
+    window.unfreezeAccount = async function(accountId) {
+        console.log(`🔵 Unfreezing account: ${accountId}`);
+
+        if (!confirm('Are you sure you want to unfreeze this account?')) {
+            return;
+        }
+
+        try {
+            await apiCall('/admin/accounts/unfreeze', {
+                method: 'POST',
+                body: JSON.stringify({ accountId: parseInt(accountId) })
+            });
+
+            console.log('✅ Account unfrozen successfully');
+            showAlert('Account unfrozen successfully!', 'success', 'adminAlertContainer');
+
+            await loadAdminAccounts();
+
+        } catch (err) {
+            console.error('🔴 Unfreeze failed:', err);
+            showAlert(err.message || 'Failed to unfreeze account', 'error', 'adminAlertContainer');
+        }
+    };
+
+    // ✅ FIXED: Toggle user status
+    window.toggleUserStatus = async function(userId, enable) {
+        console.log(`🔵 ${enable ? 'Enabling' : 'Disabling'} user: ${userId}`);
+
+        try {
+            await apiCall(`/admin/users/${userId}/${enable ? 'enable' : 'disable'}`, {
+                method: 'PUT'
+            });
+
+            console.log(`✅ User ${enable ? 'enabled' : 'disabled'} successfully`);
+            showAlert(`User ${enable ? 'enabled' : 'disabled'} successfully!`, 'success', 'adminAlertContainer');
+
+            await loadAdminUsers();
+
+        } catch (err) {
+            console.error(`🔴 Toggle user status failed:`, err);
+            showAlert(err.message || 'Failed to update user status', 'error', 'adminAlertContainer');
+        }
+    };
+
+    // ✅ Enhanced showAlert with better styling
+    const originalShowAlert = window.showAlert;
+    window.showAlert = function(message, type = 'success', container = 'alertContainer') {
+        console.log(`📢 Alert (${type}): ${message}`);
+
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.style.cssText = `
+            animation: slideIn 0.3s ease;
+            margin-bottom: 15px;
+            padding: 16px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+        `;
+
+        // Add icon based on type
+        const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+        alertDiv.innerHTML = `<strong>${icon}</strong> ${message}`;
+
+        const containerEl = document.getElementById(container);
+        if (containerEl) {
+            // Remove old alerts of same type
+            containerEl.querySelectorAll(`.alert-${type}`).forEach(el => el.remove());
+
+            containerEl.appendChild(alertDiv);
+
+            // Auto-dismiss after 5 seconds
+            setTimeout(() => {
+                alertDiv.style.animation = 'fadeOut 0.3s ease';
+                setTimeout(() => alertDiv.remove(), 300);
+            }, 5000);
+        } else {
+            console.warn(`⚠️ Alert container '${container}' not found, using fallback`);
+            if (originalShowAlert) {
+                originalShowAlert(message, type, container);
+            }
+        }
+    };
 </script>
 </body>
 </html>

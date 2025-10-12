@@ -1298,12 +1298,54 @@
 
     // Utility Functions
     function showAlert(message, type = 'success', container = 'alertContainer') {
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type}`;
-        alertDiv.textContent = message;
-        document.getElementById(container).appendChild(alertDiv);
-        setTimeout(() => alertDiv.remove(), 5000);
+    console.log(`📢 Alert (${type}): ${message}`);
+
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.style.cssText = `
+        animation: slideIn 0.3s ease;
+        margin-bottom: 15px;
+    `;
+
+    // Add icon based on type
+    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
+    alertDiv.innerHTML = `<strong>${icon}</strong> ${message}`;
+
+    const containerEl = document.getElementById(container);
+    if (containerEl) {
+        // Remove old alerts of same type
+        containerEl.querySelectorAll(`.alert-${type}`).forEach(el => el.remove());
+
+        containerEl.appendChild(alertDiv);
+
+        // Auto-dismiss after 5 seconds
+        setTimeout(() => {
+            alertDiv.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => alertDiv.remove(), 300);
+        }, 5000);
+    } else {
+        console.warn(`⚠️ Alert container '${container}' not found`);
     }
+}
+
+    if (!document.getElementById('customAnimations')) {
+    const style = document.createElement('style');
+    style.id = 'customAnimations';
+    style.textContent = `
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes slideOut {
+            from { opacity: 1; transform: translateY(0); }
+            to { opacity: 0; transform: translateY(-20px); }
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    `;
+    document.head.appendChild(style);
+}
 
     function apiCall(endpoint, options = {}) {
         const token = localStorage.getItem('token');
@@ -1534,30 +1576,47 @@
     }
 
     async function handleDepositWithdraw(e) {
-        e.preventDefault();
-        const accountId = document.getElementById('dwAccountId').value;
-        const type = document.getElementById('dwType').value;
-        const amount = parseFloat(document.getElementById('dwAmount').value);
+    e.preventDefault();
 
-        try {
-            await apiCall(`/accounts/id/${accountId}/${type}`, {
-                method: 'PUT',
-                body: JSON.stringify({ amount })
-            });
+    const accountId = document.getElementById('dwAccountId').value;
+    const type = document.getElementById('dwType').value;
+    const amount = parseFloat(document.getElementById('dwAmount').value);
 
-            showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`);
-            closeModal('depositWithdrawModal');
-            document.getElementById('dwAmount').value = '';
+    console.log(`🔵 START: ${type} - Account: ${accountId}, Amount: ${amount}`);
 
-            // Reload all data to reflect changes
-            await loadUserDashboard();
-            if (document.getElementById('userAccountsContent').classList.contains('hidden') === false) {
-                await loadAccountsPage();
-            }
-        } catch (err) {
-            showAlert(err.message, 'error');
-        }
+    if (!amount || amount <= 0) {
+        showAlert('Please enter a valid amount greater than zero', 'error');
+        return;
     }
+
+    try {
+        console.log(`📡 Sending ${type} request...`);
+
+        const result = await apiCall(`/accounts/id/${accountId}/${type}`, {
+            method: 'PUT',
+            body: JSON.stringify({ amount })
+        });
+
+        console.log('✅ Operation successful:', result);
+
+        showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`, 'success');
+
+        closeModal('depositWithdrawModal');
+        document.getElementById('dwAmount').value = '';
+
+        // Reload data
+        await loadUserDashboard();
+
+        // Reload accounts page if currently viewing it
+        if (!document.getElementById('userAccountsContent').classList.contains('hidden')) {
+            await loadAccountsPage();
+        }
+
+    } catch (err) {
+        console.error(`🔴 ${type} failed:`, err);
+        showAlert(err.message || `${type} failed. Please try again.`, 'error');
+    }
+}
 
     async function loadTransferPage() {
         populateAccountSelects();
@@ -2114,14 +2173,23 @@ function clearTransferForm() {
     }
 
     async function toggleUserStatus(userId, enable) {
-        try {
-            await apiCall(`/admin/users/${userId}/${enable ? 'enable' : 'disable'}`, { method: 'PUT' });
-            showAlert(`User ${enable ? 'enabled' : 'disabled'} successfully!`, 'success', 'adminAlertContainer');
-            loadAdminUsers();
-        } catch (err) {
-            showAlert(err.message, 'error', 'adminAlertContainer');
-        }
+    console.log(`🔵 ${enable ? 'Enabling' : 'Disabling'} user: ${userId}`);
+
+    try {
+        await apiCall(`/admin/users/${userId}/${enable ? 'enable' : 'disable'}`, {
+            method: 'PUT'
+        });
+
+        console.log(`✅ User ${enable ? 'enabled' : 'disabled'} successfully`);
+        showAlert(`User ${enable ? 'enabled' : 'disabled'} successfully!`, 'success', 'adminAlertContainer');
+
+        await loadAdminUsers();
+
+    } catch (err) {
+        console.error(`🔴 Toggle user status failed:`, err);
+        showAlert(err.message || 'Failed to update user status', 'error', 'adminAlertContainer');
     }
+}
 
     async function lockUser(userId) {
         const reason = prompt('Enter reason for locking user:');
@@ -2178,12 +2246,13 @@ function clearTransferForm() {
         }
     }
 
-    function showFreezeModal(accountId) {
-        document.getElementById('adminActionTitle').textContent = 'Freeze Account';
-        document.getElementById('adminActionType').value = 'freeze';
-        document.getElementById('adminActionTarget').value = accountId;
-        document.getElementById('adminActionModal').style.display = 'block';
-    }
+    async function showFreezeModal(accountId) {
+    document.getElementById('adminActionTitle').textContent = 'Freeze Account';
+    document.getElementById('adminActionType').value = 'freeze';
+    document.getElementById('adminActionTarget').value = accountId;
+    document.getElementById('adminActionReason').value = '';
+    document.getElementById('adminActionModal').style.display = 'block';
+}
 
     function showCloseModal(accountId) {
         document.getElementById('adminActionTitle').textContent = 'Close Account';
@@ -2193,37 +2262,69 @@ function clearTransferForm() {
     }
 
     async function handleAdminAction(e) {
-        e.preventDefault();
-        const type = document.getElementById('adminActionType').value;
-        const accountId = document.getElementById('adminActionTarget').value;
-        const reason = document.getElementById('adminActionReason').value;
+    e.preventDefault();
 
-        try {
-            await apiCall(`/admin/accounts/${type}`, {
-                method: 'POST',
-                body: JSON.stringify({ accountId: parseInt(accountId), reason })
-            });
-            showAlert(`Account ${type}d successfully!`, 'success', 'adminAlertContainer');
-            closeModal('adminActionModal');
-            document.getElementById('adminActionReason').value = '';
-            loadAdminAccounts();
-        } catch (err) {
-            showAlert(err.message, 'error', 'adminAlertContainer');
-        }
+    const type = document.getElementById('adminActionType').value;
+    const accountId = document.getElementById('adminActionTarget').value;
+    const reason = document.getElementById('adminActionReason').value;
+
+    console.log(`🔵 Admin Action: ${type} - Account: ${accountId}`);
+
+    if (!reason || reason.trim().length === 0) {
+        showAlert('Please provide a reason', 'error', 'adminAlertContainer');
+        return;
     }
+
+    try {
+        console.log(`📡 Sending admin ${type} request...`);
+
+        await apiCall(`/admin/accounts/${type}`, {
+            method: 'POST',
+            body: JSON.stringify({
+                accountId: parseInt(accountId),
+                reason
+            })
+        });
+
+        console.log(`✅ Account ${type}d successfully`);
+
+        showAlert(`Account ${type}d successfully!`, 'success', 'adminAlertContainer');
+
+        closeModal('adminActionModal');
+        document.getElementById('adminActionReason').value = '';
+
+        // Reload admin accounts
+        await loadAdminAccounts();
+
+    } catch (err) {
+        console.error(`🔴 Admin ${type} failed:`, err);
+        showAlert(err.message || `Failed to ${type} account`, 'error', 'adminAlertContainer');
+    }
+}
 
     async function unfreezeAccount(accountId) {
-        try {
-            await apiCall('/admin/accounts/unfreeze', {
-                method: 'POST',
-                body: JSON.stringify({ accountId })
-            });
-            showAlert('Account unfrozen successfully!', 'success', 'adminAlertContainer');
-            loadAdminAccounts();
-        } catch (err) {
-            showAlert(err.message, 'error', 'adminAlertContainer');
-        }
+    console.log(`🔵 Unfreezing account: ${accountId}`);
+
+    if (!confirm('Are you sure you want to unfreeze this account?')) {
+        return;
     }
+
+    try {
+        await apiCall('/admin/accounts/unfreeze', {
+            method: 'POST',
+            body: JSON.stringify({ accountId: parseInt(accountId) })
+        });
+
+        console.log('✅ Account unfrozen successfully');
+        showAlert('Account unfrozen successfully!', 'success', 'adminAlertContainer');
+
+        await loadAdminAccounts();
+
+    } catch (err) {
+        console.error('🔴 Unfreeze failed:', err);
+        showAlert(err.message || 'Failed to unfreeze account', 'error', 'adminAlertContainer');
+    }
+}
 
     async function loadAdminTransactions() {
         try {
@@ -2729,26 +2830,30 @@ function clearTransferForm() {
     let activeRequests = 0;
 
     function showLoading() {
-        activeRequests++;
-        if (activeRequests === 1) {
-            // Only show spinner after 300ms delay (prevents flash for fast requests)
-            loadingTimeout = setTimeout(() => {
-                if (activeRequests > 0 && !document.getElementById('loadingSpinner')) {
-                    const spinner = document.createElement('div');
-                    spinner.id = 'loadingSpinner';
-                    spinner.innerHTML = `
-                        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-                                    z-index: 9999; background: white; padding: 20px; border-radius: 8px;
-                                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
-                            <div class="spinner"></div>
-                            <p style="margin-top: 10px; text-align: center;">Loading...</p>
+    activeRequests++;
+    if (activeRequests === 1) {
+        loadingTimeout = setTimeout(() => {
+            if (activeRequests > 0 && !document.getElementById('loadingSpinner')) {
+                const spinner = document.createElement('div');
+                spinner.id = 'loadingSpinner';
+                spinner.innerHTML = `
+                    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+                                background: rgba(0,0,0,0.5); z-index: 9999; display: flex;
+                                align-items: center; justify-content: center;">
+                        <div style="background: white; padding: 30px; border-radius: 12px;
+                                    box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center;">
+                            <div class="spinner" style="width: 50px; height: 50px; border: 4px solid #f3f3f3;
+                                 border-top: 4px solid var(--primary-color); border-radius: 50%;
+                                 animation: spin 1s linear infinite; margin: 0 auto;"></div>
+                            <p style="margin-top: 15px; font-weight: 600; color: var(--text-primary);">Processing...</p>
                         </div>
-                    `;
-                    document.body.appendChild(spinner);
-                }
-            }, 300);
-        }
+                    </div>
+                `;
+                document.body.appendChild(spinner);
+            }
+        }, 300);
     }
+}
 
     function hideLoading() {
         activeRequests--;
@@ -2762,28 +2867,77 @@ function clearTransferForm() {
 
     // Enhanced API call with loading
     const originalApiCall = apiCall;
-    apiCall = async function(endpoint, options = {}) {
-        const method = options.method || 'GET';
-        const isRead = method === 'GET';
 
-        // Use lightweight progress bar for read operations
-        // Use full loading for write operations (POST, PUT, DELETE)
-        if (isRead) {
-            showProgressBar();
-        } else {
-            showLoading();
+let activeRequests = 0;
+let loadingTimeout = null;
+
+apiCall = async function(endpoint, options = {}) {
+    const method = options.method || 'GET';
+    const isRead = method === 'GET';
+
+    // Show appropriate loading indicator
+    if (isRead) {
+        showProgressBar();
+    } else {
+        showLoading();
+    }
+
+    try {
+        const token = localStorage.getItem('token');
+        const headers = {
+            'Content-Type': 'application/json',
+            ...(token && { 'Authorization': `Bearer ${token}` })
+        };
+
+        console.log(`🔵 API Call: ${method} ${endpoint}`);
+
+        const response = await fetch(`${API_BASE}${endpoint}`, {
+            ...options,
+            headers: { ...headers, ...options.headers }
+        });
+
+        console.log(`📡 Response status: ${response.status}`);
+
+        if (response.status === 401) {
+            console.error('❌ Unauthorized - logging out');
+            logout();
+            throw new Error('Session expired. Please login again.');
         }
 
-        try {
-            return await originalApiCall(endpoint, options);
-        } finally {
-            if (isRead) {
-                hideProgressBar();
-            } else {
-                hideLoading();
+        // ✅ FIXED: Handle empty responses (like from DELETE operations)
+        const contentType = response.headers.get('content-type');
+        let data = null;
+
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            const text = await response.text();
+            if (text) {
+                data = { message: text };
             }
         }
-    };
+
+        if (!response.ok) {
+            const errorMessage = data?.message || data?.error || `Request failed with status ${response.status}`;
+            console.error(`❌ API Error: ${errorMessage}`);
+            throw new Error(errorMessage);
+        }
+
+        console.log('✅ API Call successful');
+        return data;
+
+    } catch (error) {
+        console.error('🔴 API Call failed:', error);
+        throw error;
+    } finally {
+        if (isRead) {
+            hideProgressBar();
+        } else {
+            hideLoading();
+        }
+    }
+};
+
 
 
      function showProgressBar() {

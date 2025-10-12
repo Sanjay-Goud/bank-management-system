@@ -2869,7 +2869,7 @@ function clearTransferForm() {
     const originalApiCall = apiCall;
 
 activeRequests = 0;
-let loadingTimeout = null;
+loadingTimeout = null;
 
 apiCall = async function(endpoint, options = {}) {
     const method = options.method || 'GET';

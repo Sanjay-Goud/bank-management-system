@@ -36,29 +36,37 @@ public class AdminServiceImpl implements AdminService {
     public AdminDashboardDto getDashboard() {
         AdminDashboardDto dashboard = new AdminDashboardDto();
 
+        // User statistics
         dashboard.setTotalUsers(userRepository.count());
+
+        // Account statistics
         dashboard.setTotalAccounts(accountRepository.count());
         dashboard.setActiveAccounts(accountRepository.countByAccountStatus("Active"));
         dashboard.setFrozenAccounts(accountRepository.countByAccountStatus("Frozen"));
 
+        // Total system balance
         BigDecimal totalBalance = accountRepository.findAll().stream()
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dashboard.setTotalSystemBalance(totalBalance);
 
+        // Today's transactions
         LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
         dashboard.setTodayTransactions(transactionRepository.countTransactionsSince(startOfDay));
 
+        // Today's transaction volume
         BigDecimal todayVolume = transactionRepository.findAll().stream()
                 .filter(t -> t.getTransactionDate().isAfter(startOfDay))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         dashboard.setTodayTransactionVolume(todayVolume);
 
+        // Placeholder for pending approvals and alerts
         dashboard.setPendingApprovals(0L);
         dashboard.setCriticalAlerts(auditLogRepository.findBySeverityOrderByTimestampDesc("CRITICAL").size() > 0 ?
                 (long) auditLogRepository.findBySeverityOrderByTimestampDesc("CRITICAL").size() : 0L);
 
+        // Recent high-value transactions (>50000)
         List<TransactionDto> highValueTxns = transactionRepository.findAll().stream()
                 .filter(t -> t.getAmount().compareTo(new BigDecimal("50000")) > 0)
                 .sorted((t1, t2) -> t2.getTransactionDate().compareTo(t1.getTransactionDate()))
@@ -67,6 +75,7 @@ public class AdminServiceImpl implements AdminService {
                 .collect(Collectors.toList());
         dashboard.setRecentHighValueTransactions(highValueTxns);
 
+        // Recent critical audit logs
         List<AuditLogDto> criticalLogs = auditLogRepository.findBySeverityOrderByTimestampDesc("CRITICAL")
                 .stream()
                 .limit(10)
@@ -94,128 +103,76 @@ public class AdminServiceImpl implements AdminService {
     @Override
     @Transactional
     public void toggleUserStatus(Long userId, HttpServletRequest request) {
-        log.info("🔵 START: Toggling user status for ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setEnabled(!user.getEnabled());
+        userRepository.save(user);
 
-            user.setEnabled(!user.getEnabled());
-            userRepository.save(user);
+        String action = user.getEnabled() ? "USER_ENABLED" : "USER_DISABLED";
+        auditService.logAction("admin", action,
+                "User " + user.getUsername() + " status changed", request, "INFO");
 
-            String action = user.getEnabled() ? "USER_ENABLED" : "USER_DISABLED";
-            auditService.logAction("admin", action,
-                    "User " + user.getUsername() + " status changed", request, "INFO");
-
-            log.info("🟢 SUCCESS: User {} status toggled to: {}", user.getUsername(), user.getEnabled());
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in toggleUserStatus: {}", e.getMessage(), e);
-            throw e;
-        }
+        log.info("User {} status toggled to: {}", user.getUsername(), user.getEnabled());
     }
 
     @Override
     @Transactional
     public void lockUser(Long userId, String reason, HttpServletRequest request) {
-        log.info("🔵 START: Locking user ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setAccountLocked(true);
+        user.setAccountLockedUntil(LocalDateTime.now().plusDays(30)); // Lock for 30 days
+        userRepository.save(user);
 
-            user.setAccountLocked(true);
-            user.setAccountLockedUntil(LocalDateTime.now().plusDays(30));
-            userRepository.save(user);
+        notificationService.createNotification(user, "Account Locked",
+                "Your account has been locked. Reason: " + reason, "SECURITY");
 
-            notificationService.createNotification(user, "Account Locked",
-                    "Your account has been locked. Reason: " + reason, "SECURITY");
+        auditService.logAction("admin", "USER_LOCKED",
+                "User " + user.getUsername() + " locked. Reason: " + reason, request, "CRITICAL");
 
-            auditService.logAction("admin", "USER_LOCKED",
-                    "User " + user.getUsername() + " locked. Reason: " + reason, request, "CRITICAL");
-
-            log.info("🟢 SUCCESS: User {} locked", user.getUsername());
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in lockUser: {}", e.getMessage(), e);
-            throw e;
-        }
+        log.info("User {} locked. Reason: {}", user.getUsername(), reason);
     }
 
     @Override
     @Transactional
     public void unlockUser(Long userId, HttpServletRequest request) {
-        log.info("🔵 START: Unlocking user ID: {}", userId);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
 
-        try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        user.setAccountLocked(false);
+        user.setAccountLockedUntil(null);
+        user.setFailedLoginAttempts(0);
+        userRepository.save(user);
 
-            user.setAccountLocked(false);
-            user.setAccountLockedUntil(null);
-            user.setFailedLoginAttempts(0);
-            userRepository.save(user);
+        notificationService.createNotification(user, "Account Unlocked",
+                "Your account has been unlocked.", "SECURITY");
 
-            notificationService.createNotification(user, "Account Unlocked",
-                    "Your account has been unlocked.", "SECURITY");
+        auditService.logAction("admin", "USER_UNLOCKED",
+                "User " + user.getUsername() + " unlocked", request, "INFO");
 
-            auditService.logAction("admin", "USER_UNLOCKED",
-                    "User " + user.getUsername() + " unlocked", request, "INFO");
-
-            log.info("🟢 SUCCESS: User {} unlocked", user.getUsername());
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in unlockUser: {}", e.getMessage(), e);
-            throw e;
-        }
+        log.info("User {} unlocked", user.getUsername());
     }
 
-    // ✅ FIXED: Proper error handling for freeze/unfreeze/close operations
     @Override
     @Transactional
     public void freezeAccount(FreezeAccountRequest request, HttpServletRequest httpRequest) {
-        log.info("🔵 START: Admin freeze account request - ID: {}", request.getAccountId());
-
-        try {
-            accountService.freezeAccount(request.getAccountId(), request.getReason(),
-                    "admin", httpRequest);
-            log.info("🟢 SUCCESS: Account frozen via admin");
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in admin freezeAccount: {}", e.getMessage(), e);
-            throw e;
-        }
+        accountService.freezeAccount(request.getAccountId(), request.getReason(),
+                "admin", httpRequest);
     }
 
     @Override
     @Transactional
     public void unfreezeAccount(Long accountId, HttpServletRequest request) {
-        log.info("🔵 START: Admin unfreeze account - ID: {}", accountId);
-
-        try {
-            accountService.unfreezeAccount(accountId, "admin", request);
-            log.info("🟢 SUCCESS: Account unfrozen via admin");
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in admin unfreezeAccount: {}", e.getMessage(), e);
-            throw e;
-        }
+        accountService.unfreezeAccount(accountId, "admin", request);
     }
 
     @Override
     @Transactional
     public void closeAccount(CloseAccountRequest request, HttpServletRequest httpRequest) {
-        log.info("🔵 START: Admin close account request - ID: {}", request.getAccountId());
-
-        try {
-            accountService.closeAccount(request.getAccountId(), request.getReason(),
-                    "admin", httpRequest);
-            log.info("🟢 SUCCESS: Account closed via admin");
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in admin closeAccount: {}", e.getMessage(), e);
-            throw e;
-        }
+        accountService.closeAccount(request.getAccountId(), request.getReason(),
+                "admin", httpRequest);
     }
 
     @Override
@@ -240,6 +197,7 @@ public class AdminServiceImpl implements AdminService {
                 .map(AuditLogMapper::mapToAuditLogDto)
                 .collect(Collectors.toList());
     }
+
 
     @Override
     public List<AuditLogDto> getAuditLogsByUser(String username) {
@@ -281,6 +239,7 @@ public class AdminServiceImpl implements AdminService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         summary.setTotalTransactionAmount(totalAmount);
 
+        // Deposits
         List<Transaction> deposits = todayTxns.stream()
                 .filter(t -> "DEPOSIT".equals(t.getTransactionType()))
                 .collect(Collectors.toList());
@@ -289,6 +248,7 @@ public class AdminServiceImpl implements AdminService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // Withdrawals
         List<Transaction> withdrawals = todayTxns.stream()
                 .filter(t -> "WITHDRAW".equals(t.getTransactionType()))
                 .collect(Collectors.toList());
@@ -297,15 +257,17 @@ public class AdminServiceImpl implements AdminService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // Transfers
         List<Transaction> transfers = todayTxns.stream()
                 .filter(t -> t.getTransactionType().contains("TRANSFER"))
                 .collect(Collectors.toList());
-        summary.setTransfersCount((long) transfers.size() / 2);
+        summary.setTransfersCount((long) transfers.size() / 2); // Divide by 2 as each transfer has 2 records
         summary.setTransfersAmount(transfers.stream()
                 .filter(t -> "TRANSFER_OUT".equals(t.getTransactionType()))
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // New accounts and users today
         summary.setNewAccountsToday(accountRepository.findAll().stream()
                 .filter(a -> a.getCreatedAt().isAfter(startOfDay))
                 .count());
@@ -313,11 +275,13 @@ public class AdminServiceImpl implements AdminService {
                 .filter(u -> u.getCreatedAt().isAfter(startOfDay))
                 .count());
 
+        // Active users (users who made transactions today)
         summary.setActiveUsers((long) todayTxns.stream()
                 .map(Transaction::getAccountId)
                 .distinct()
                 .count());
 
+        // System balance
         BigDecimal systemBalance = accountRepository.findAll().stream()
                 .map(Account::getBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
@@ -343,6 +307,7 @@ public class AdminServiceImpl implements AdminService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         stats.setTotalAmount(totalAmount);
 
+        // Deposits
         List<Transaction> deposits = transactions.stream()
                 .filter(t -> "DEPOSIT".equals(t.getTransactionType()))
                 .collect(Collectors.toList());
@@ -351,6 +316,7 @@ public class AdminServiceImpl implements AdminService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // Withdrawals
         List<Transaction> withdrawals = transactions.stream()
                 .filter(t -> "WITHDRAW".equals(t.getTransactionType()))
                 .collect(Collectors.toList());
@@ -359,6 +325,7 @@ public class AdminServiceImpl implements AdminService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // Transfers
         List<Transaction> transfers = transactions.stream()
                 .filter(t -> "TRANSFER_OUT".equals(t.getTransactionType()))
                 .collect(Collectors.toList());
@@ -367,6 +334,7 @@ public class AdminServiceImpl implements AdminService {
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add));
 
+        // Average, largest, smallest
         if (!transactions.isEmpty()) {
             stats.setAverageTransactionAmount(totalAmount.divide(
                     BigDecimal.valueOf(transactions.size()), 2, RoundingMode.HALF_UP));
@@ -392,7 +360,6 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void freezeAccount(Long accountId, String reason, HttpServletRequest httpRequest) {
-        log.info("🔵 Admin freezeAccount (alternate method) - ID: {}", accountId);
         accountService.freezeAccount(accountId, reason, "admin", httpRequest);
     }
 
@@ -405,32 +372,23 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public void closeAccount(Long accountId, String reason, HttpServletRequest httpRequest) {
-        log.info("🔵 Admin closeAccount (alternate method) - ID: {}", accountId);
         accountService.closeAccount(accountId, reason, "admin", httpRequest);
+
     }
 
     @Override
     public void approveTransaction(Long transactionId, Boolean approved, String remarks, HttpServletRequest httpRequest) {
-        log.info("🔵 START: Approving transaction ID: {}, approved: {}", transactionId, approved);
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
 
-        try {
-            Transaction transaction = transactionRepository.findById(transactionId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Transaction not found"));
+        transaction.setStatus(approved ? "APPROVED" : "REJECTED");
+        transaction.setRemarks(remarks);
+        transactionRepository.save(transaction);
 
-            transaction.setStatus(approved ? "APPROVED" : "REJECTED");
-            transaction.setRemarks(remarks);
-            transactionRepository.save(transaction);
-
-            String action = approved ? "TRANSACTION_APPROVED" : "TRANSACTION_REJECTED";
-            auditService.logAction("admin", action,
-                    "Transaction " + transaction.getId() + " " + action.toLowerCase(), httpRequest, "INFO");
-
-            log.info("🟢 SUCCESS: Transaction {} {}", transactionId, approved ? "approved" : "rejected");
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in approveTransaction: {}", e.getMessage(), e);
-            throw e;
-        }
+        // Audit log
+        String action = approved ? "TRANSACTION_APPROVED" : "TRANSACTION_REJECTED";
+        auditService.logAction("admin", action,
+                "Transaction " + transaction.getId() + " " + action.toLowerCase(), httpRequest, "INFO");
     }
 
     @Override
@@ -454,7 +412,7 @@ public class AdminServiceImpl implements AdminService {
 
     @Override
     public Map<String, Object> getTransactionVolume(String period) {
-        LocalDateTime start = LocalDateTime.now().minusDays(1);
+        LocalDateTime start = LocalDateTime.now().minusDays(1); // default daily
         LocalDateTime end = LocalDateTime.now();
 
         BigDecimal totalAmount = transactionRepository.findAll().stream()
@@ -479,60 +437,38 @@ public class AdminServiceImpl implements AdminService {
     @Transactional
     @Override
     public void enableUser(Long userId, HttpServletRequest request) {
-        log.info("🔵 START: Enabling user ID: {}", userId);
-
-        try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-            if (!user.getEnabled()) {
-                user.setEnabled(true);
-                userRepository.save(user);
-
-                auditService.logAction("admin", "USER_ENABLED",
-                        "User " + user.getUsername() + " enabled", request, "INFO");
-
-                log.info("🟢 SUCCESS: User {} enabled", user.getUsername());
-            } else {
-                log.info("⚠️ User {} is already enabled", user.getUsername());
-            }
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in enableUser: {}", e.getMessage(), e);
-            throw e;
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (!user.getEnabled()) {
+            user.setEnabled(true);
+            userRepository.save(user);
+            auditService.logAction("admin", "USER_ENABLED",
+                    "User " + user.getUsername() + " enabled", request, "INFO");
+            log.info("User {} enabled", user.getUsername());
         }
+
     }
 
     @Transactional
     @Override
     public void disableUser(Long userId, HttpServletRequest request) {
-        log.info("🔵 START: Disabling user ID: {}", userId);
-
-        try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-
-            if (user.getEnabled()) {
-                user.setEnabled(false);
-                userRepository.save(user);
-
-                auditService.logAction("admin", "USER_DISABLED",
-                        "User " + user.getUsername() + " disabled", request, "INFO");
-
-                log.info("🟢 SUCCESS: User {} disabled", user.getUsername());
-            } else {
-                log.info("⚠️ User {} is already disabled", user.getUsername());
-            }
-
-        } catch (Exception e) {
-            log.error("🔴 ERROR in disableUser: {}", e.getMessage(), e);
-            throw e;
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
+        if (user.getEnabled()) {
+            user.setEnabled(false);
+            userRepository.save(user);
+            auditService.logAction("admin", "USER_DISABLED",
+                    "User " + user.getUsername() + " disabled", request, "INFO");
+            log.info("User {} disabled", user.getUsername());
         }
+
     }
+
 
     private AdminUserDto mapToAdminUserDto(User user) {
         AdminUserDto dto = UserMapper.mapToAdminUserDto(user);
 
+        // Add account and balance info
         List<Account> accounts = accountRepository.findByUser_Id(user.getId());
         dto.setTotalAccounts(accounts.size());
 

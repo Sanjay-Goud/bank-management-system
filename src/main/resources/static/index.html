@@ -237,7 +237,7 @@
         }
 
         .header h1::before {
-            content: '🏦';
+            content: 'ðŸ¦';
             font-size: 28px;
         }
 
@@ -794,7 +794,7 @@
         <h1>Banking Management System</h1>
         <div style="display: flex; align-items: center; gap: 20px;">
             <div class="notification-badge" onclick="showNotifications()">
-                <button class="btn">🔔 Notifications</button>
+                <button class="btn">ðŸ”” Notifications</button>
                 <span class="badge" id="notifCount">0</span>
             </div>
             <span id="userName"></span>
@@ -822,7 +822,7 @@
                 </div>
                 <div class="stat-card">
                     <h3>Total Balance</h3>
-                    <div class="value" id="totalBalance">₹0</div>
+                    <div class="value" id="totalBalance">â‚¹0</div>
                 </div>
                 <div class="stat-card">
                     <h3>Active Accounts</h3>
@@ -1052,7 +1052,7 @@
                 </div>
                 <div class="stat-card">
                     <h3>System Balance</h3>
-                    <div class="value" id="adminSystemBalance">₹0</div>
+                    <div class="value" id="adminSystemBalance">â‚¹0</div>
                 </div>
                 <div class="stat-card">
                     <h3>Today's Transactions</h3>
@@ -1298,54 +1298,12 @@
 
     // Utility Functions
     function showAlert(message, type = 'success', container = 'alertContainer') {
-    console.log(`📢 Alert (${type}): ${message}`);
-
-    const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type}`;
-    alertDiv.style.cssText = `
-        animation: slideIn 0.3s ease;
-        margin-bottom: 15px;
-    `;
-
-    // Add icon based on type
-    const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-    alertDiv.innerHTML = `<strong>${icon}</strong> ${message}`;
-
-    const containerEl = document.getElementById(container);
-    if (containerEl) {
-        // Remove old alerts of same type
-        containerEl.querySelectorAll(`.alert-${type}`).forEach(el => el.remove());
-
-        containerEl.appendChild(alertDiv);
-
-        // Auto-dismiss after 5 seconds
-        setTimeout(() => {
-            alertDiv.style.animation = 'slideOut 0.3s ease';
-            setTimeout(() => alertDiv.remove(), 300);
-        }, 5000);
-    } else {
-        console.warn(`⚠️ Alert container '${container}' not found`);
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${type}`;
+        alertDiv.textContent = message;
+        document.getElementById(container).appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 5000);
     }
-}
-
-    if (!document.getElementById('customAnimations')) {
-    const style = document.createElement('style');
-    style.id = 'customAnimations';
-    style.textContent = `
-        @keyframes slideIn {
-            from { opacity: 0; transform: translateY(-20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes slideOut {
-            from { opacity: 1; transform: translateY(0); }
-            to { opacity: 0; transform: translateY(-20px); }
-        }
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-    `;
-    document.head.appendChild(style);
-}
 
     function apiCall(endpoint, options = {}) {
         const token = localStorage.getItem('token');
@@ -1471,7 +1429,7 @@
         const activeAccounts = userAccounts.filter(acc => acc.accountStatus === 'Active').length;
 
         document.getElementById('totalAccounts').textContent = userAccounts.length;
-        document.getElementById('totalBalance').textContent = '₹' + totalBalance.toFixed(2);
+        document.getElementById('totalBalance').textContent = 'â‚¹' + totalBalance.toFixed(2);
         document.getElementById('activeAccounts').textContent = activeAccounts;
         document.getElementById('todayTransactions').textContent = allTransactions.length;
     }
@@ -1482,7 +1440,7 @@
             <tr>
                 <td>${acc.maskedAccountNumber || acc.accountNumber}</td>
                 <td>${acc.accountType}</td>
-                <td>₹${parseFloat(acc.balance).toFixed(2)}</td>
+                <td>â‚¹${parseFloat(acc.balance).toFixed(2)}</td>
                 <td><span class="badge badge-${acc.accountStatus === 'Active' ? 'success' : 'danger'}">${acc.accountStatus}</span></td>
             </tr>
         `).join('');
@@ -1492,7 +1450,7 @@
             <tr>
                 <td>${new Date(txn.transactionDate).toLocaleString()}</td>
                 <td>${txn.transactionType}</td>
-                <td>₹${parseFloat(txn.amount).toFixed(2)}</td>
+                <td>â‚¹${parseFloat(txn.amount).toFixed(2)}</td>
                 <td>${txn.referenceNumber}</td>
             </tr>
         `).join('');
@@ -1521,7 +1479,7 @@
                     <div>
                         <h4>${acc.accountType} Account</h4>
                         <p>Account Number: ${acc.accountNumber}</p>
-                        <p>Balance: ₹${parseFloat(acc.balance).toFixed(2)}</p>
+                        <p>Balance: â‚¹${parseFloat(acc.balance).toFixed(2)}</p>
                         <p>Status: <span class="badge badge-${acc.accountStatus === 'Active' ? 'success' : 'danger'}">${acc.accountStatus}</span></p>
                     </div>
                     <div style="display: flex; gap: 10px;">
@@ -1576,47 +1534,30 @@
     }
 
     async function handleDepositWithdraw(e) {
-    e.preventDefault();
+        e.preventDefault();
+        const accountId = document.getElementById('dwAccountId').value;
+        const type = document.getElementById('dwType').value;
+        const amount = parseFloat(document.getElementById('dwAmount').value);
 
-    const accountId = document.getElementById('dwAccountId').value;
-    const type = document.getElementById('dwType').value;
-    const amount = parseFloat(document.getElementById('dwAmount').value);
+        try {
+            await apiCall(`/accounts/id/${accountId}/${type}`, {
+                method: 'PUT',
+                body: JSON.stringify({ amount })
+            });
 
-    console.log(`🔵 START: ${type} - Account: ${accountId}, Amount: ${amount}`);
+            showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`);
+            closeModal('depositWithdrawModal');
+            document.getElementById('dwAmount').value = '';
 
-    if (!amount || amount <= 0) {
-        showAlert('Please enter a valid amount greater than zero', 'error');
-        return;
-    }
-
-    try {
-        console.log(`📡 Sending ${type} request...`);
-
-        const result = await apiCall(`/accounts/id/${accountId}/${type}`, {
-            method: 'PUT',
-            body: JSON.stringify({ amount })
-        });
-
-        console.log('✅ Operation successful:', result);
-
-        showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`, 'success');
-
-        closeModal('depositWithdrawModal');
-        document.getElementById('dwAmount').value = '';
-
-        // Reload data
-        await loadUserDashboard();
-
-        // Reload accounts page if currently viewing it
-        if (!document.getElementById('userAccountsContent').classList.contains('hidden')) {
-            await loadAccountsPage();
+            // Reload all data to reflect changes
+            await loadUserDashboard();
+            if (document.getElementById('userAccountsContent').classList.contains('hidden') === false) {
+                await loadAccountsPage();
+            }
+        } catch (err) {
+            showAlert(err.message, 'error');
         }
-
-    } catch (err) {
-        console.error(`🔴 ${type} failed:`, err);
-        showAlert(err.message || `${type} failed. Please try again.`, 'error');
     }
-}
 
     async function loadTransferPage() {
         populateAccountSelects();
@@ -1629,7 +1570,7 @@
 
         select.innerHTML = '<option value="">Select Account</option>' +
             userAccounts.map(acc =>
-                `<option value="${acc.accountNumber}">${acc.accountNumber} - ₹${parseFloat(acc.balance).toFixed(2)}</option>`
+                `<option value="${acc.accountNumber}">${acc.accountNumber} - â‚¹${parseFloat(acc.balance).toFixed(2)}</option>`
             ).join('');
 
         if (filterSelect) {
@@ -1669,10 +1610,10 @@
         try {
             const account = await apiCall(`/directory/accounts/validate/${accountNumber}`);
             document.getElementById('recipientInfo').textContent =
-                `✓ ${account.accountHolderName} - ${account.accountType}`;
+                `âœ“ ${account.accountHolderName} - ${account.accountType}`;
             document.getElementById('recipientInfo').style.color = 'green';
         } catch (err) {
-            document.getElementById('recipientInfo').textContent = '✗ Invalid account';
+            document.getElementById('recipientInfo').textContent = 'âœ— Invalid account';
             document.getElementById('recipientInfo').style.color = 'red';
         }
     }
@@ -1870,8 +1811,8 @@ function clearTransferForm() {
                 <td>${new Date(txn.transactionDate).toLocaleString()}</td>
                 <td>${txn.transactionType}</td>
                 <td>${txn.accountId}</td>
-                <td>₹${parseFloat(txn.amount).toFixed(2)}</td>
-                <td>₹${parseFloat(txn.balanceAfter).toFixed(2)}</td>
+                <td>â‚¹${parseFloat(txn.amount).toFixed(2)}</td>
+                <td>â‚¹${parseFloat(txn.balanceAfter).toFixed(2)}</td>
                 <td>${txn.referenceNumber}</td>
                 <td><span class="badge badge-${txn.status === 'SUCCESS' ? 'success' : 'danger'}">${txn.status}</span></td>
             </tr>
@@ -2098,7 +2039,7 @@ function clearTransferForm() {
 
             document.getElementById('adminTotalUsers').textContent = dashboard.totalUsers;
             document.getElementById('adminTotalAccounts').textContent = dashboard.totalAccounts;
-            document.getElementById('adminSystemBalance').textContent = '₹' + parseFloat(dashboard.totalSystemBalance).toFixed(2);
+            document.getElementById('adminSystemBalance').textContent = 'â‚¹' + parseFloat(dashboard.totalSystemBalance).toFixed(2);
             document.getElementById('adminTodayTxns').textContent = dashboard.todayTransactions;
 
             const highValueBody = document.querySelector('#adminHighValueTable tbody');
@@ -2106,7 +2047,7 @@ function clearTransferForm() {
                 <tr>
                     <td>${new Date(txn.transactionDate).toLocaleString()}</td>
                     <td>${txn.transactionType}</td>
-                    <td>₹${parseFloat(txn.amount).toFixed(2)}</td>
+                    <td>â‚¹${parseFloat(txn.amount).toFixed(2)}</td>
                     <td>${txn.accountId}</td>
                     <td>${txn.referenceNumber}</td>
                 </tr>
@@ -2154,7 +2095,7 @@ function clearTransferForm() {
                     <td>${user.role}</td>
                     <td><span class="badge badge-${user.enabled ? 'success' : 'danger'}">${user.enabled ? 'Active' : 'Disabled'}</span></td>
                     <td>${user.totalAccounts || 0}</td>
-                    <td>₹${parseFloat(user.totalBalance || 0).toFixed(2)}</td>
+                    <td>â‚¹${parseFloat(user.totalBalance || 0).toFixed(2)}</td>
                     <td>
                         ${user.enabled ?
                             `<button onclick="toggleUserStatus(${user.id}, false)" class="btn btn-warning">Disable</button>` :
@@ -2173,23 +2114,14 @@ function clearTransferForm() {
     }
 
     async function toggleUserStatus(userId, enable) {
-    console.log(`🔵 ${enable ? 'Enabling' : 'Disabling'} user: ${userId}`);
-
-    try {
-        await apiCall(`/admin/users/${userId}/${enable ? 'enable' : 'disable'}`, {
-            method: 'PUT'
-        });
-
-        console.log(`✅ User ${enable ? 'enabled' : 'disabled'} successfully`);
-        showAlert(`User ${enable ? 'enabled' : 'disabled'} successfully!`, 'success', 'adminAlertContainer');
-
-        await loadAdminUsers();
-
-    } catch (err) {
-        console.error(`🔴 Toggle user status failed:`, err);
-        showAlert(err.message || 'Failed to update user status', 'error', 'adminAlertContainer');
+        try {
+            await apiCall(`/admin/users/${userId}/${enable ? 'enable' : 'disable'}`, { method: 'PUT' });
+            showAlert(`User ${enable ? 'enabled' : 'disabled'} successfully!`, 'success', 'adminAlertContainer');
+            loadAdminUsers();
+        } catch (err) {
+            showAlert(err.message, 'error', 'adminAlertContainer');
+        }
     }
-}
 
     async function lockUser(userId) {
         const reason = prompt('Enter reason for locking user:');
@@ -2226,7 +2158,7 @@ function clearTransferForm() {
                     <td>${acc.accountNumber}</td>
                     <td>${acc.accountHolderName}</td>
                     <td>${acc.accountType}</td>
-                    <td>₹${parseFloat(acc.balance).toFixed(2)}</td>
+                    <td>â‚¹${parseFloat(acc.balance).toFixed(2)}</td>
                     <td><span class="badge badge-${acc.accountStatus === 'Active' ? 'success' : acc.accountStatus === 'Frozen' ? 'warning' : 'danger'}">${acc.accountStatus}</span></td>
                     <td>${new Date(acc.createdAt).toLocaleDateString()}</td>
                     <td>
@@ -2246,13 +2178,12 @@ function clearTransferForm() {
         }
     }
 
-    async function showFreezeModal(accountId) {
-    document.getElementById('adminActionTitle').textContent = 'Freeze Account';
-    document.getElementById('adminActionType').value = 'freeze';
-    document.getElementById('adminActionTarget').value = accountId;
-    document.getElementById('adminActionReason').value = '';
-    document.getElementById('adminActionModal').style.display = 'block';
-}
+    function showFreezeModal(accountId) {
+        document.getElementById('adminActionTitle').textContent = 'Freeze Account';
+        document.getElementById('adminActionType').value = 'freeze';
+        document.getElementById('adminActionTarget').value = accountId;
+        document.getElementById('adminActionModal').style.display = 'block';
+    }
 
     function showCloseModal(accountId) {
         document.getElementById('adminActionTitle').textContent = 'Close Account';
@@ -2262,69 +2193,37 @@ function clearTransferForm() {
     }
 
     async function handleAdminAction(e) {
-    e.preventDefault();
+        e.preventDefault();
+        const type = document.getElementById('adminActionType').value;
+        const accountId = document.getElementById('adminActionTarget').value;
+        const reason = document.getElementById('adminActionReason').value;
 
-    const type = document.getElementById('adminActionType').value;
-    const accountId = document.getElementById('adminActionTarget').value;
-    const reason = document.getElementById('adminActionReason').value;
-
-    console.log(`🔵 Admin Action: ${type} - Account: ${accountId}`);
-
-    if (!reason || reason.trim().length === 0) {
-        showAlert('Please provide a reason', 'error', 'adminAlertContainer');
-        return;
+        try {
+            await apiCall(`/admin/accounts/${type}`, {
+                method: 'POST',
+                body: JSON.stringify({ accountId: parseInt(accountId), reason })
+            });
+            showAlert(`Account ${type}d successfully!`, 'success', 'adminAlertContainer');
+            closeModal('adminActionModal');
+            document.getElementById('adminActionReason').value = '';
+            loadAdminAccounts();
+        } catch (err) {
+            showAlert(err.message, 'error', 'adminAlertContainer');
+        }
     }
-
-    try {
-        console.log(`📡 Sending admin ${type} request...`);
-
-        await apiCall(`/admin/accounts/${type}`, {
-            method: 'POST',
-            body: JSON.stringify({
-                accountId: parseInt(accountId),
-                reason
-            })
-        });
-
-        console.log(`✅ Account ${type}d successfully`);
-
-        showAlert(`Account ${type}d successfully!`, 'success', 'adminAlertContainer');
-
-        closeModal('adminActionModal');
-        document.getElementById('adminActionReason').value = '';
-
-        // Reload admin accounts
-        await loadAdminAccounts();
-
-    } catch (err) {
-        console.error(`🔴 Admin ${type} failed:`, err);
-        showAlert(err.message || `Failed to ${type} account`, 'error', 'adminAlertContainer');
-    }
-}
 
     async function unfreezeAccount(accountId) {
-    console.log(`🔵 Unfreezing account: ${accountId}`);
-
-    if (!confirm('Are you sure you want to unfreeze this account?')) {
-        return;
+        try {
+            await apiCall('/admin/accounts/unfreeze', {
+                method: 'POST',
+                body: JSON.stringify({ accountId })
+            });
+            showAlert('Account unfrozen successfully!', 'success', 'adminAlertContainer');
+            loadAdminAccounts();
+        } catch (err) {
+            showAlert(err.message, 'error', 'adminAlertContainer');
+        }
     }
-
-    try {
-        await apiCall('/admin/accounts/unfreeze', {
-            method: 'POST',
-            body: JSON.stringify({ accountId: parseInt(accountId) })
-        });
-
-        console.log('✅ Account unfrozen successfully');
-        showAlert('Account unfrozen successfully!', 'success', 'adminAlertContainer');
-
-        await loadAdminAccounts();
-
-    } catch (err) {
-        console.error('🔴 Unfreeze failed:', err);
-        showAlert(err.message || 'Failed to unfreeze account', 'error', 'adminAlertContainer');
-    }
-}
 
     async function loadAdminTransactions() {
         try {
@@ -2335,7 +2234,7 @@ function clearTransferForm() {
                     <td>${new Date(txn.transactionDate).toLocaleString()}</td>
                     <td>${txn.transactionType}</td>
                     <td>${txn.accountId}</td>
-                    <td>₹${parseFloat(txn.amount).toFixed(2)}</td>
+                    <td>â‚¹${parseFloat(txn.amount).toFixed(2)}</td>
                     <td>${txn.referenceNumber}</td>
                     <td><span class="badge badge-${txn.status === 'SUCCESS' ? 'success' : txn.status === 'PENDING' ? 'warning' : 'danger'}">${txn.status}</span></td>
                     <td>
@@ -2410,14 +2309,14 @@ function clearTransferForm() {
             summaryDiv.innerHTML = `
                 <p><strong>Date:</strong> ${new Date(dailySummary.date).toLocaleDateString()}</p>
                 <p><strong>Total Transactions:</strong> ${dailySummary.totalTransactions}</p>
-                <p><strong>Total Amount:</strong> ₹${parseFloat(dailySummary.totalTransactionAmount || 0).toFixed(2)}</p>
-                <p><strong>Deposits:</strong> ${dailySummary.depositsCount} (₹${parseFloat(dailySummary.depositsAmount || 0).toFixed(2)})</p>
-                <p><strong>Withdrawals:</strong> ${dailySummary.withdrawalsCount} (₹${parseFloat(dailySummary.withdrawalsAmount || 0).toFixed(2)})</p>
-                <p><strong>Transfers:</strong> ${dailySummary.transfersCount} (₹${parseFloat(dailySummary.transfersAmount || 0).toFixed(2)})</p>
+                <p><strong>Total Amount:</strong> â‚¹${parseFloat(dailySummary.totalTransactionAmount || 0).toFixed(2)}</p>
+                <p><strong>Deposits:</strong> ${dailySummary.depositsCount} (â‚¹${parseFloat(dailySummary.depositsAmount || 0).toFixed(2)})</p>
+                <p><strong>Withdrawals:</strong> ${dailySummary.withdrawalsCount} (â‚¹${parseFloat(dailySummary.withdrawalsAmount || 0).toFixed(2)})</p>
+                <p><strong>Transfers:</strong> ${dailySummary.transfersCount} (â‚¹${parseFloat(dailySummary.transfersAmount || 0).toFixed(2)})</p>
                 <p><strong>New Accounts:</strong> ${dailySummary.newAccountsToday}</p>
                 <p><strong>New Users:</strong> ${dailySummary.newUsersToday}</p>
                 <p><strong>Active Users:</strong> ${dailySummary.activeUsers}</p>
-                <p><strong>System Balance:</strong> ₹${parseFloat(dailySummary.systemBalance || 0).toFixed(2)}</p>
+                <p><strong>System Balance:</strong> â‚¹${parseFloat(dailySummary.systemBalance || 0).toFixed(2)}</p>
             `;
 
             // Account Type Distribution
@@ -2484,9 +2383,9 @@ function clearTransferForm() {
                 })
             });
 
-            alert(`Simple Interest: ₹${result.simpleInterest}\n` +
-                  `Compound Interest: ₹${result.compoundInterest}\n` +
-                  `Maturity Amount: ₹${result.maturityAmount}`);
+            alert(`Simple Interest: â‚¹${result.simpleInterest}\n` +
+                  `Compound Interest: â‚¹${result.compoundInterest}\n` +
+                  `Maturity Amount: â‚¹${result.maturityAmount}`);
         } catch (err) {
             showAlert(err.message, 'error');
         }
@@ -2568,7 +2467,7 @@ function clearTransferForm() {
             const txn = await apiCall(`/transactions/reference/${ref}`);
             alert(`Transaction Details:\n` +
                   `Type: ${txn.transactionType}\n` +
-                  `Amount: ₹${txn.amount}\n` +
+                  `Amount: â‚¹${txn.amount}\n` +
                   `Date: ${new Date(txn.transactionDate).toLocaleString()}\n` +
                   `Status: ${txn.status}\n` +
                   `Description: ${txn.description}`);
@@ -2589,10 +2488,10 @@ function clearTransferForm() {
                 <body>
                     <h2>Account Statistics</h2>
                     <p><strong>Total Accounts:</strong> ${stats.totalAccounts}</p>
-                    <p><strong>Total Balance:</strong> ₹${parseFloat(stats.totalBalance).toFixed(2)}</p>
-                    <p><strong>Average Balance:</strong> ₹${parseFloat(stats.averageBalance).toFixed(2)}</p>
-                    <p><strong>Maximum Balance:</strong> ₹${parseFloat(stats.maxBalance).toFixed(2)}</p>
-                    <p><strong>Minimum Balance:</strong> ₹${parseFloat(stats.minBalance).toFixed(2)}</p>
+                    <p><strong>Total Balance:</strong> â‚¹${parseFloat(stats.totalBalance).toFixed(2)}</p>
+                    <p><strong>Average Balance:</strong> â‚¹${parseFloat(stats.averageBalance).toFixed(2)}</p>
+                    <p><strong>Maximum Balance:</strong> â‚¹${parseFloat(stats.maxBalance).toFixed(2)}</p>
+                    <p><strong>Minimum Balance:</strong> â‚¹${parseFloat(stats.minBalance).toFixed(2)}</p>
                     <p><strong>Active Accounts:</strong> ${stats.activeAccounts}</p>
                     <p><strong>Inactive Accounts:</strong> ${stats.inactiveAccounts}</p>
                     <p><strong>Frozen Accounts:</strong> ${stats.frozenAccounts}</p>
@@ -2602,7 +2501,7 @@ function clearTransferForm() {
                     ).join('')}
                     <h3>Balance by Type:</h3>
                     ${Object.entries(stats.balanceByType || {}).map(([type, balance]) =>
-                        `<p>${type}: ₹${parseFloat(balance).toFixed(2)}</p>`
+                        `<p>${type}: â‚¹${parseFloat(balance).toFixed(2)}</p>`
                     ).join('')}
                 </body>
                 </html>
@@ -2629,10 +2528,10 @@ function clearTransferForm() {
 
             alert(`Transaction Statistics (${startDate} to ${endDate}):\n\n` +
                   `Total Transactions: ${stats.totalCount || stats.totalTransactions}\n` +
-                  `Total Debit: ₹${parseFloat(stats.totalDebit || 0).toFixed(2)}\n` +
-                  `Total Credit: ₹${parseFloat(stats.totalCredit || 0).toFixed(2)}\n` +
-                  `Net Amount: ₹${parseFloat(stats.netAmount || 0).toFixed(2)}\n` +
-                  `Average Transaction: ₹${parseFloat(stats.averageTransactionAmount || 0).toFixed(2)}`);
+                  `Total Debit: â‚¹${parseFloat(stats.totalDebit || 0).toFixed(2)}\n` +
+                  `Total Credit: â‚¹${parseFloat(stats.totalCredit || 0).toFixed(2)}\n` +
+                  `Net Amount: â‚¹${parseFloat(stats.netAmount || 0).toFixed(2)}\n` +
+                  `Average Transaction: â‚¹${parseFloat(stats.averageTransactionAmount || 0).toFixed(2)}`);
         } catch (err) {
             showAlert(err.message, 'error');
         }
@@ -2714,7 +2613,7 @@ function clearTransferForm() {
 
     // Format currency
     function formatCurrency(amount) {
-        return '₹' + parseFloat(amount).toLocaleString('en-IN', {
+        return 'â‚¹' + parseFloat(amount).toLocaleString('en-IN', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
@@ -2830,30 +2729,26 @@ function clearTransferForm() {
     let activeRequests = 0;
 
     function showLoading() {
-    activeRequests++;
-    if (activeRequests === 1) {
-        loadingTimeout = setTimeout(() => {
-            if (activeRequests > 0 && !document.getElementById('loadingSpinner')) {
-                const spinner = document.createElement('div');
-                spinner.id = 'loadingSpinner';
-                spinner.innerHTML = `
-                    <div style="position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-                                background: rgba(0,0,0,0.5); z-index: 9999; display: flex;
-                                align-items: center; justify-content: center;">
-                        <div style="background: white; padding: 30px; border-radius: 12px;
-                                    box-shadow: 0 4px 20px rgba(0,0,0,0.3); text-align: center;">
-                            <div class="spinner" style="width: 50px; height: 50px; border: 4px solid #f3f3f3;
-                                 border-top: 4px solid var(--primary-color); border-radius: 50%;
-                                 animation: spin 1s linear infinite; margin: 0 auto;"></div>
-                            <p style="margin-top: 15px; font-weight: 600; color: var(--text-primary);">Processing...</p>
+        activeRequests++;
+        if (activeRequests === 1) {
+            // Only show spinner after 300ms delay (prevents flash for fast requests)
+            loadingTimeout = setTimeout(() => {
+                if (activeRequests > 0 && !document.getElementById('loadingSpinner')) {
+                    const spinner = document.createElement('div');
+                    spinner.id = 'loadingSpinner';
+                    spinner.innerHTML = `
+                        <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+                                    z-index: 9999; background: white; padding: 20px; border-radius: 8px;
+                                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);">
+                            <div class="spinner"></div>
+                            <p style="margin-top: 10px; text-align: center;">Loading...</p>
                         </div>
-                    </div>
-                `;
-                document.body.appendChild(spinner);
-            }
-        }, 300);
+                    `;
+                    document.body.appendChild(spinner);
+                }
+            }, 300);
+        }
     }
-}
 
     function hideLoading() {
         activeRequests--;
@@ -2867,77 +2762,28 @@ function clearTransferForm() {
 
     // Enhanced API call with loading
     const originalApiCall = apiCall;
+    apiCall = async function(endpoint, options = {}) {
+        const method = options.method || 'GET';
+        const isRead = method === 'GET';
 
-activeRequests = 0;
-loadingTimeout = null;
-
-apiCall = async function(endpoint, options = {}) {
-    const method = options.method || 'GET';
-    const isRead = method === 'GET';
-
-    // Show appropriate loading indicator
-    if (isRead) {
-        showProgressBar();
-    } else {
-        showLoading();
-    }
-
-    try {
-        const token = localStorage.getItem('token');
-        const headers = {
-            'Content-Type': 'application/json',
-            ...(token && { 'Authorization': `Bearer ${token}` })
-        };
-
-        console.log(`🔵 API Call: ${method} ${endpoint}`);
-
-        const response = await fetch(`${API_BASE}${endpoint}`, {
-            ...options,
-            headers: { ...headers, ...options.headers }
-        });
-
-        console.log(`📡 Response status: ${response.status}`);
-
-        if (response.status === 401) {
-            console.error('❌ Unauthorized - logging out');
-            logout();
-            throw new Error('Session expired. Please login again.');
+        // Use lightweight progress bar for read operations
+        // Use full loading for write operations (POST, PUT, DELETE)
+        if (isRead) {
+            showProgressBar();
+        } else {
+            showLoading();
         }
 
-        // ✅ FIXED: Handle empty responses (like from DELETE operations)
-        const contentType = response.headers.get('content-type');
-        let data = null;
-
-        if (contentType && contentType.includes('application/json')) {
-            data = await response.json();
-        } else {
-            const text = await response.text();
-            if (text) {
-                data = { message: text };
+        try {
+            return await originalApiCall(endpoint, options);
+        } finally {
+            if (isRead) {
+                hideProgressBar();
+            } else {
+                hideLoading();
             }
         }
-
-        if (!response.ok) {
-            const errorMessage = data?.message || data?.error || `Request failed with status ${response.status}`;
-            console.error(`❌ API Error: ${errorMessage}`);
-            throw new Error(errorMessage);
-        }
-
-        console.log('✅ API Call successful');
-        return data;
-
-    } catch (error) {
-        console.error('🔴 API Call failed:', error);
-        throw error;
-    } finally {
-        if (isRead) {
-            hideProgressBar();
-        } else {
-            hideLoading();
-        }
-    }
-};
-
+    };
 
 
      function showProgressBar() {
@@ -2963,274 +2809,12 @@ apiCall = async function(endpoint, options = {}) {
     }
 
 
+
+
+
     console.log('Banking Management System Loaded Successfully');
     console.log('Version: 1.0.0');
     console.log('Features: User Dashboard, Admin Dashboard, Transfers, Transactions, Notifications, 2FA, Audit Logs');
-
-   (function() {
-    'use strict';
-
-    console.log('🔧 Applying safe frontend fixes...');
-
-    // Store the original apiCall if not already stored
-    if (!window._originalApiCall) {
-        window._originalApiCall = window.apiCall;
-    }
-
-    // ✅ FIXED: Enhanced API call with better error handling
-    window.apiCall = async function(endpoint, options = {}) {
-        const method = options.method || 'GET';
-        const isRead = method === 'GET';
-
-        // Show appropriate loading indicator
-        if (isRead) {
-            showProgressBar();
-        } else {
-            showLoading();
-        }
-
-        try {
-            const token = localStorage.getItem('token');
-            const headers = {
-                'Content-Type': 'application/json',
-                ...(token && { 'Authorization': `Bearer ${token}` })
-            };
-
-            console.log(`🔵 API Call: ${method} ${endpoint}`);
-
-            const response = await fetch(`${API_BASE}${endpoint}`, {
-                ...options,
-                headers: { ...headers, ...options.headers }
-            });
-
-            console.log(`📡 Response status: ${response.status}`);
-
-            if (response.status === 401) {
-                console.error('❌ Unauthorized - logging out');
-                logout();
-                throw new Error('Session expired. Please login again.');
-            }
-
-            // ✅ FIXED: Handle empty responses (like from DELETE operations)
-            const contentType = response.headers.get('content-type');
-            let data = null;
-
-            if (contentType && contentType.includes('application/json')) {
-                const text = await response.text();
-                if (text && text.trim()) {
-                    try {
-                        data = JSON.parse(text);
-                    } catch (e) {
-                        console.warn('Failed to parse JSON:', text);
-                        data = { message: text };
-                    }
-                }
-            } else {
-                const text = await response.text();
-                if (text && text.trim()) {
-                    data = { message: text };
-                }
-            }
-
-            if (!response.ok) {
-                const errorMessage = data?.message || data?.error || `Request failed with status ${response.status}`;
-                console.error(`❌ API Error: ${errorMessage}`);
-                throw new Error(errorMessage);
-            }
-
-            console.log('✅ API Call successful');
-            return data;
-
-        } catch (error) {
-            console.error('🔴 API Call failed:', error);
-            throw error;
-        } finally {
-            if (isRead) {
-                hideProgressBar();
-            } else {
-                hideLoading();
-            }
-        }
-    };
-
-    // ✅ FIXED: Enhanced deposit/withdraw handler
-    window.handleDepositWithdraw = async function(e) {
-        e.preventDefault();
-
-        const accountId = document.getElementById('dwAccountId').value;
-        const type = document.getElementById('dwType').value;
-        const amount = parseFloat(document.getElementById('dwAmount').value);
-
-        console.log(`🔵 START: ${type} - Account: ${accountId}, Amount: ${amount}`);
-
-        if (!amount || amount <= 0) {
-            showAlert('Please enter a valid amount greater than zero', 'error');
-            return;
-        }
-
-        try {
-            console.log(`📡 Sending ${type} request...`);
-
-            const result = await apiCall(`/accounts/id/${accountId}/${type}`, {
-                method: 'PUT',
-                body: JSON.stringify({ amount })
-            });
-
-            console.log('✅ Operation successful:', result);
-
-            showAlert(`${type.charAt(0).toUpperCase() + type.slice(1)} successful!`, 'success');
-
-            closeModal('depositWithdrawModal');
-            document.getElementById('dwAmount').value = '';
-
-            // Reload data
-            await loadUserDashboard();
-
-            // Reload accounts page if currently viewing it
-            if (!document.getElementById('userAccountsContent').classList.contains('hidden')) {
-                await loadAccountsPage();
-            }
-
-        } catch (err) {
-            console.error(`🔴 ${type} failed:`, err);
-            showAlert(err.message || `${type} failed. Please try again.`, 'error');
-        }
-    };
-
-    // ✅ FIXED: Admin freeze account
-    window.showFreezeModal = function(accountId) {
-        document.getElementById('adminActionTitle').textContent = 'Freeze Account';
-        document.getElementById('adminActionType').value = 'freeze';
-        document.getElementById('adminActionTarget').value = accountId;
-        document.getElementById('adminActionReason').value = '';
-        document.getElementById('adminActionModal').style.display = 'block';
-    };
-
-    // ✅ FIXED: Admin actions handler
-    window.handleAdminAction = async function(e) {
-        e.preventDefault();
-
-        const type = document.getElementById('adminActionType').value;
-        const accountId = document.getElementById('adminActionTarget').value;
-        const reason = document.getElementById('adminActionReason').value;
-
-        console.log(`🔵 Admin Action: ${type} - Account: ${accountId}`);
-
-        if (!reason || reason.trim().length === 0) {
-            showAlert('Please provide a reason', 'error', 'adminAlertContainer');
-            return;
-        }
-
-        try {
-            console.log(`📡 Sending admin ${type} request...`);
-
-            await apiCall(`/admin/accounts/${type}`, {
-                method: 'POST',
-                body: JSON.stringify({
-                    accountId: parseInt(accountId),
-                    reason
-                })
-            });
-
-            console.log(`✅ Account ${type}d successfully`);
-
-            showAlert(`Account ${type}d successfully!`, 'success', 'adminAlertContainer');
-
-            closeModal('adminActionModal');
-            document.getElementById('adminActionReason').value = '';
-
-            // Reload admin accounts
-            await loadAdminAccounts();
-
-        } catch (err) {
-            console.error(`🔴 Admin ${type} failed:`, err);
-            showAlert(err.message || `Failed to ${type} account`, 'error', 'adminAlertContainer');
-        }
-    };
-
-    // ✅ FIXED: Unfreeze account
-    window.unfreezeAccount = async function(accountId) {
-        console.log(`🔵 Unfreezing account: ${accountId}`);
-
-        if (!confirm('Are you sure you want to unfreeze this account?')) {
-            return;
-        }
-
-        try {
-            await apiCall('/admin/accounts/unfreeze', {
-                method: 'POST',
-                body: JSON.stringify({ accountId: parseInt(accountId) })
-            });
-
-            console.log('✅ Account unfrozen successfully');
-            showAlert('Account unfrozen successfully!', 'success', 'adminAlertContainer');
-
-            await loadAdminAccounts();
-
-        } catch (err) {
-            console.error('🔴 Unfreeze failed:', err);
-            showAlert(err.message || 'Failed to unfreeze account', 'error', 'adminAlertContainer');
-        }
-    };
-
-    // ✅ FIXED: Toggle user status
-    window.toggleUserStatus = async function(userId, enable) {
-        console.log(`🔵 ${enable ? 'Enabling' : 'Disabling'} user: ${userId}`);
-
-        try {
-            await apiCall(`/admin/users/${userId}/${enable ? 'enable' : 'disable'}`, {
-                method: 'PUT'
-            });
-
-            console.log(`✅ User ${enable ? 'enabled' : 'disabled'} successfully`);
-            showAlert(`User ${enable ? 'enabled' : 'disabled'} successfully!`, 'success', 'adminAlertContainer');
-
-            await loadAdminUsers();
-
-        } catch (err) {
-            console.error(`🔴 Toggle user status failed:`, err);
-            showAlert(err.message || 'Failed to update user status', 'error', 'adminAlertContainer');
-        }
-    };
-
-    // ✅ Enhanced showAlert with better styling
-    const originalShowAlert = window.showAlert;
-    window.showAlert = function(message, type = 'success', container = 'alertContainer') {
-        console.log(`📢 Alert (${type}): ${message}`);
-
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${type}`;
-        alertDiv.style.cssText = `
-            animation: slideIn 0.3s ease;
-            margin-bottom: 15px;
-            padding: 16px 20px;
-            border-radius: 8px;
-            font-weight: 500;
-        `;
-
-        // Add icon based on type
-        const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
-        alertDiv.innerHTML = `<strong>${icon}</strong> ${message}`;
-
-        const containerEl = document.getElementById(container);
-        if (containerEl) {
-            // Remove old alerts of same type
-            containerEl.querySelectorAll(`.alert-${type}`).forEach(el => el.remove());
-
-            containerEl.appendChild(alertDiv);
-
-            // Auto-dismiss after 5 seconds
-            setTimeout(() => {
-                alertDiv.style.animation = 'fadeOut 0.3s ease';
-                setTimeout(() => alertDiv.remove(), 300);
-            }, 5000);
-        } else {
-            console.warn(`⚠️ Alert container '${container}' not found, using fallback`);
-            if (originalShowAlert) {
-                originalShowAlert(message, type, container);
-            }
-        }
-    };
 </script>
 </body>
 </html>
